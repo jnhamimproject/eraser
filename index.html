@@ -37,13 +37,25 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
 #busy{position:absolute;inset:0;background:#000a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:9;text-align:center;padding:20px}
 .sp{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--ac);border-radius:50%;animation:r 0.8s linear infinite}
 @keyframes r{to{transform:rotate(360deg)}}
+#top b{flex:0 0 auto}
+.ic{min-height:40px;padding:6px 12px}
+#qs{flex:1;text-align:center;font-size:13px;color:var(--ac)}
+#hint{position:absolute;left:8px;right:8px;top:8px;background:#000b;padding:8px 10px;border-radius:10px;font-size:13px;color:#cfd8de;pointer-events:none;z-index:3;text-align:center}
+#mh{font-size:12px;color:var(--mu);text-align:center}
+#gv{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+#gh{padding:max(12px,env(safe-area-inset-top)) 14px 8px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
+#gg{flex:1;overflow:auto;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start}
+.cd{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative;min-height:70px}
+.cd canvas{width:100%;display:block}
+.bg{position:absolute;top:4px;left:4px;font-size:12px;background:#000c;padding:2px 7px;border-radius:6px}
+#gb{background:var(--panel);border-top:1px solid var(--line);padding:10px 12px max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
 </style>
 </head>
 <body>
 
 <div id="home">
   <h1>বাল্ক ইরেজার</h1>
-  <div class="st">ছবি থেকে অবাঞ্ছিত জিনিস (পিন, দাগ) মুছুন। পাশের পিক্সেল মিলিয়ে ভরাট হবে (LaMa AI)।</div>
+  <div class="st">ছবি থেকে অবাঞ্ছিত জিনিস (পিন, দাগ) মুছুন। দাগ দিয়ে পরের ছবিতে চলে যান, মোছার কাজ ব্যাকগ্রাউন্ডে হবে। শেষে একসাথে দেখে সেভ করুন।</div>
 
   <div class="card">
     <h2>ধাপ ১: AI মডেল (একবারই)</h2>
@@ -66,7 +78,6 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
     <h2>ধাপ ৩: ছবি সিলেক্ট</h2>
     <label class="b">একসাথে অনেক ছবি বাছুন<input id="pf" type="file" accept="image/*" multiple hidden></label>
     <div id="pst" class="st">কোনো ছবি নেই</div>
-    <label class="st"><input id="adl" type="checkbox"> প্রতিটি Done-এ অটো ডাউনলোড (না দিলে শেষে একটি ZIP)</label>
     <button id="fold" hidden>সেভ ফোল্ডার বাছুন (ল্যাপটপ/ডেস্কটপ)</button><div id="fst2" class="st" hidden></div>
   </div>
 
@@ -74,30 +85,31 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
 </div>
 
 <div id="ed" hidden>
-  <div id="top"><b id="cnt"></b><span id="nm" class="st"></span></div>
+  <div id="top"><button id="pv" class="ic">◀</button><b id="cnt"></b><button id="nx" class="ic">▶</button><span id="qs"></span><button id="gr" class="ic">▦ সব ছবি</button></div>
   <div id="stage"><div id="wrap"><canvas id="img"></canvas><canvas id="msk"></canvas></div>
     <div id="fr" hidden></div>
+    <div id="hint">আঙুলে দাগ দিন · দুই আঙুলে জুম/সরান · তারপর নিচে ✓ চাপুন</div>
     <div id="busy" hidden><div class="sp"></div><div id="bt">প্রসেস হচ্ছে…</div></div>
   </div>
   <div id="bar">
     <div class="row" id="md"><button class="mdb" data-m="fast">⚡ দ্রুত</button><button class="mdb" data-m="ai">🧠 AI (নিখুঁত)</button></div>
+    <div id="mh"></div>
     <div class="sl">ব্রাশ <input id="bs" type="range" min="6" max="80" value="24"><span id="bv">24</span></div>
     <div class="row">
-      <button id="un">↶ আনডু</button>
-      <button id="cl">দাগ মুছুন</button>
-      <button id="rv">⟲ ফিট</button>
-      <button id="er" class="p">ইরেজ</button>
+      <button id="un">↶ আনডু</button><button id="cl">✕ দাগ</button><button id="rv">⟲ ফিট</button><button id="rt">↺ আসল</button>
     </div>
-    <button id="dn" class="p">Done ও পরের ছবি</button>
+    <div class="row"><button id="er">👁 এখনই দেখুন</button><button id="dn" class="p">✓ কাজে দিন ▶</button></div>
   </div>
 </div>
 
-<div id="fin" hidden>
-  <h1>সব শেষ ✓</h1>
-  <div id="fst" class="st"></div>
-  <button id="zip" class="p">ZIP ডাউনলোড</button>
-  <button id="shr">শেয়ার / গ্যালারিতে সেভ</button>
-  <button id="rs">নতুন ব্যাচ</button>
+<div id="gv" hidden>
+  <div id="gh"><b>সব ছবি</b><span id="gq" class="st"></span></div>
+  <div id="gg"></div>
+  <div id="gb">
+    <div id="sst" class="st">ছবিতে চাপ দিলে আবার এডিট করা যাবে।</div>
+    <div class="row"><button id="gbk">◀ এডিটে ফিরুন</button><button id="sv" class="p">⬇ সব সেভ</button></div>
+    <button id="rs">নতুন ব্যাচ</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
@@ -110,8 +122,8 @@ if('serviceWorker' in navigator&&!self.crossOriginIsolated){
 const $=id=>document.getElementById(id);
 const MODEL_URL='https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx';
 const MAXSIDE=5000;
-let files=[],idx=0,results=[],sessP=null,hasModel=false,mode='fast';
-let W=0,H=0,s=1,tx=0,ty=0,undo=[],cur=null,OW=0,OH=0,fr={x:0,y:0,w:0,h:0},minS=1,crop=false,dirH=null,used=new Set();
+let files=[],idx=0,results=[],sessP=null,hasModel=false,mode='ai';
+let W=0,H=0,s=1,tx=0,ty=0,undo=[],OW=0,OH=0,fr={x:0,y:0,w:0,h:0},minS=1,crop=false,dirH=null,used=new Set();
 const ic=$('img'),mc=$('msk'),ix=ic.getContext('2d',{willReadFrequently:true}),mx=mc.getContext('2d',{willReadFrequently:true});
 const bk=document.createElement('canvas'),bx=bk.getContext('2d');
 
@@ -121,9 +133,9 @@ async function dbGet(k){const d=await idb();return new Promise(r=>{const q=d.tra
 async function dbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('k','readwrite');t.objectStore('k').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 
 /* ---------- Mode ---------- */
-try{mode=localStorage.getItem('mode')||'fast'}catch(e){}
-function setMode(m){mode=m;try{localStorage.setItem('mode',m)}catch(e){}
-  document.querySelectorAll('.mdb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));preload()}
+try{mode=localStorage.getItem('mode2')||'ai'}catch(e){}
+function setMode(m){mode=m;try{localStorage.setItem('mode2',m)}catch(e){}
+  document.querySelectorAll('.mdb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('mh').textContent=m==='fast'?'ছোট দাগ/পিনের জন্য · প্রায় তাৎক্ষণিক':'নিখুঁত ফল · ব্যাকগ্রাউন্ডে চলে, আপনি পরের ছবিতে যান';preload()}
 document.querySelectorAll('.mdb').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 function preload(){if(mode==='ai'&&hasModel&&!sessP){$('ast').textContent='AI ইঞ্জিন প্রস্তুত হচ্ছে…';
   getSess().then(()=>{$('ast').textContent='AI ইঞ্জিন প্রস্তুত ✓'+(self.crossOriginIsolated?' (মাল্টি-থ্রেড)':'')}).catch(()=>{$('ast').textContent=''})}}
@@ -156,23 +168,48 @@ if(window.showDirectoryPicker){$('fold').hidden=false;$('fold').onclick=async()=
 $('go').onclick=()=>{
   OW=Math.round(+$('ow').value)||0;OH=Math.round(+$('oh').value)||0;if(!OW||!OH)OW=OH=0;
   try{localStorage.setItem('sz',JSON.stringify([OW,OH]))}catch(e){}
-  used=new Set();idx=0;results=[];$('home').hidden=true;$('ed').hidden=false;load()};
+  photos=files.map(mkPhoto);q.length=0;$('home').hidden=true;openPhoto(0)};
 
 /* ---------- Image load / view ---------- */
-async function load(){
-  if(idx>=files.length)return finish();
-  const f=files[idx];busy('ছবি লোড হচ্ছে…');
+const mt=t=>/png/i.test(t)?'image/png':/webp/i.test(t)?'image/webp':'image/jpeg';
+const blobOf=(c,t)=>new Promise(r=>c.toBlob(r,mt(t),0.97));
+const mkPhoto=f=>({file:f,blob:f,name:f.name,type:f.type,crop:null,jobs:0,state:'new',thumb:null,w:[]});
+const waitP=p=>p.jobs?new Promise(r=>p.w.push(r)):Promise.resolve();
+let photos=[],cur=-1,ready=false,openTok=0,dirty=false,navBusy=false;
+async function openPhoto(i){
+  const tok=++openTok,p=photos[i];cur=i;ready=false;
+  $('gv').hidden=true;$('ed').hidden=false;$('cnt').textContent=(i+1)+' / '+photos.length;
+  busy(p.jobs?'এই ছবির কাজ শেষ হচ্ছে…':'ছবি লোড হচ্ছে…');
+  await waitP(p);if(tok!==openTok)return;
   try{
-    let bmp=await createImageBitmap(f,{imageOrientation:'from-image'});
-    let w=bmp.width,h=bmp.height,k=Math.min(1,MAXSIDE/Math.max(w,h));
-    W=Math.round(w*k);H=Math.round(h*k);
+    const bmp=await createImageBitmap(p.blob,{imageOrientation:'from-image'});
+    if(tok!==openTok)return;
+    const k=Math.min(1,MAXSIDE/Math.max(bmp.width,bmp.height));W=Math.round(bmp.width*k);H=Math.round(bmp.height*k);
     ic.width=mc.width=bk.width=W;ic.height=mc.height=bk.height=H;
     ix.drawImage(bmp,0,0,W,H);bmp.close&&bmp.close();
-    mx.clearRect(0,0,W,H);undo=[];cur=f;
-    $('cnt').textContent=(idx+1)+' / '+files.length;$('nm').textContent=f.name;
+    mx.clearRect(0,0,W,H);undo=[];dirty=false;cur=i;
     resetView();
-  }catch(e){alert('ছবি খোলা যায়নি: '+f.name);idx++;busy(0);return load()}
+    if(crop&&p.crop){s=fr.w/(p.crop.w*W);tx=fr.x-p.crop.x*W*s;ty=fr.y-p.crop.y*H*s;apply()}
+    ready=true;
+  }catch(e){alert('ছবি খোলা যায়নি: '+p.name)}
   busy(0)}
+async function commit(){
+  if(cur<0||!ready)return;const p=photos[cur];
+  if(crop)p.crop={x:(fr.x-tx)/s/W,y:(fr.y-ty)/s/H,w:fr.w/s/W,h:fr.h/s/H};
+  if(dirty){p.blob=await blobOf(ic,p.type);p.state='done';p.thumb=null;dirty=false}
+  const comps=buildComps();
+  if(comps.length){mx.clearRect(0,0,W,H);enqueue(p,comps,W,H)}
+  p.thumb=null}
+async function nav(i){
+  if(navBusy)return;navBusy=true;
+  try{await commit();ready=false;
+    if(i<0)return;if(i>=photos.length)await showGrid();else await openPhoto(i)}
+  finally{navBusy=false}}
+$('pv').onclick=()=>cur>0&&nav(cur-1);
+$('nx').onclick=$('dn').onclick=()=>nav(cur+1);
+$('gr').onclick=()=>nav(photos.length);
+$('rt').onclick=async()=>{if(!ready||!confirm('এই ছবির সব এডিট বাদ দিয়ে আসল ছবি ফিরিয়ে আনবেন?'))return;
+  const p=photos[cur];p.blob=p.file;p.state='new';p.thumb=null;p.crop=null;await openPhoto(cur)};
 function resetView(){
   const st=$('stage'),sw=st.clientWidth,sh=st.clientHeight,m=14;
   crop=OW>0&&OH>0;const ar=crop?OW/OH:W/H;
@@ -214,6 +251,7 @@ stage.addEventListener('pointermove',e=>{
 });
 const up=e=>{ptr.delete(e.pointerId);if(ptr.size===0){paint=false;g=null}};
 stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+$('stage').addEventListener('pointerdown',()=>$('hint').hidden=true,{once:true});
 $('bs').oninput=e=>$('bv').textContent=e.target.value;
 $('cl').onclick=()=>mx.clearRect(0,0,W,H);
 
@@ -221,18 +259,20 @@ $('cl').onclick=()=>mx.clearRect(0,0,W,H);
 function snap(){const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(ic,0,0);undo.push(c);if(undo.length>4)undo.shift()}
 $('un').onclick=()=>{const c=undo.pop();if(c){ix.clearRect(0,0,W,H);ix.drawImage(c,0,0)}else mx.clearRect(0,0,W,H)};
 
-/* ---------- LaMa inpaint ---------- */
+/* ---------- LaMa / fast inpaint ---------- */
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+let fixedN=false;
 function getSess(){
   if(!sessP){sessP=(async()=>{
     const buf=await dbGet('lama');if(!buf)throw new Error('মডেল নেই');
     ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
     const th=self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1;
-    const mkS=n=>{ort.env.wasm.numThreads=n;return ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:['wasm'],graphOptimizationLevel:'basic'})};
-    try{return await mkS(th)}catch(e){if(th>1)return await mkS(1);throw e}
+    const cf=[[th,true],[th,false]];if(th>1)cf.push([1,false]);let err;
+    for(const[n,px]of cf){try{ort.env.wasm.numThreads=n;ort.env.wasm.proxy=px;
+      return await ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:['wasm'],graphOptimizationLevel:'basic'})}catch(e){err=e}}
+    throw err
   })();sessP.catch(()=>{sessP=null})}
   return sessP}
-const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
-
 function fastFill(c,w,h,hole){
   const N=w*h;let cc=new Float32Array(N*3),aa=new Float32Array(N);
   for(let i=0;i<N;i++)if(!hole[i]){cc[i*3]=c[i*3];cc[i*3+1]=c[i*3+1];cc[i*3+2]=c[i*3+2];aa[i]=1}
@@ -249,76 +289,147 @@ function fastFill(c,w,h,hole){
     for(let k=0;k<3;k++)o[i*3+k]=(o[l*3+k]+o[r*3+k]+o[u*3+k]+o[d*3+k])/4}
   return o}
 
-async function erase(){
-  const d=mx.getImageData(0,0,W,H).data;let x0=W,y0=H,x1=-1,y1=-1;
-  for(let y=0;y<H;y++){const o=y*W*4+3;for(let x=0;x<W;x++){if(d[o+x*4]>20){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}}
-  if(x1<0)return false;
-  const fast=mode==='fast',bw=x1-x0+1,bh=y1-y0+1,cx=(x0+x1)/2,cy=(y0+y1)/2,mxs=Math.max(bw,bh);
-  const side=Math.min(Math.round(fast?Math.max(96,mxs*3):Math.max(512,mxs*1.8)),Math.min(W,H));
-  const sx=Math.round(Math.min(Math.max(0,cx-side/2),W-side)),sy=Math.round(Math.min(Math.max(0,cy-side/2),H-side));
-  const em=mk(side,side);em.getContext('2d').drawImage(mc,sx,sy,side,side,0,0,side,side);
-  const dm=mk(side,side),dx=dm.getContext('2d',{willReadFrequently:true}),r=Math.max(2,Math.round(side/(fast?100:200)));
-  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)dx.drawImage(em,a*r,b*r);
-  let t;
-  if(fast){
-    const id2=ix.getImageData(sx,sy,side,side),px=id2.data,md=dx.getImageData(0,0,side,side).data,N=side*side,hole=new Uint8Array(N),c=new Float32Array(N*3);
-    for(let i=0;i<N;i++){hole[i]=md[i*4+3]>30?1:0;c[i*3]=px[i*4];c[i*3+1]=px[i*4+1];c[i*3+2]=px[i*4+2]}
-    const o=fastFill(c,side,side,hole);
-    for(let i=0;i<N;i++)if(hole[i]){px[i*4]=o[i*3];px[i*4+1]=o[i*3+1];px[i*4+2]=o[i*3+2]}
+
+function buildComps(){
+  const g=8,gw=Math.ceil(W/g),gh=Math.ceil(H/g),n=gw*gh,sm=mk(gw,gh),sc=sm.getContext('2d',{willReadFrequently:true});
+  sc.drawImage(mc,0,0,gw,gh);const da=sc.getImageData(0,0,gw,gh).data,m=new Uint8Array(n);let any=0;
+  for(let i=0;i<n;i++)if(da[i*4+3]>6){m[i]=1;any=1}
+  if(!any)return[];
+  const dd=new Uint8Array(n),R=3,lab=new Uint8Array(n),out=[],fast=mode==='fast';
+  for(let y=0;y<gh;y++)for(let x=0;x<gw;x++)if(m[y*gw+x])for(let v=-R;v<=R;v++)for(let u=-R;u<=R;u++){const yy=y+v,xx=x+u;if(yy>=0&&yy<gh&&xx>=0&&xx<gw)dd[yy*gw+xx]=1}
+  for(let s0=0;s0<n;s0++){
+    if(!dd[s0]||lab[s0])continue;
+    const st=[s0];let x0=gw,y0=gh,x1=-1,y1=-1;lab[s0]=1;
+    while(st.length){const i=st.pop(),x=i%gw,y=(i/gw)|0;
+      if(m[i]){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+      if(x>0&&dd[i-1]&&!lab[i-1]){lab[i-1]=1;st.push(i-1)}
+      if(x<gw-1&&dd[i+1]&&!lab[i+1]){lab[i+1]=1;st.push(i+1)}
+      if(y>0&&dd[i-gw]&&!lab[i-gw]){lab[i-gw]=1;st.push(i-gw)}
+      if(y<gh-1&&dd[i+gw]&&!lab[i+gw]){lab[i+gw]=1;st.push(i+gw)}}
+    if(x1<0)continue;
+    const bx0=x0*g,by0=y0*g,bw=(x1+1)*g-bx0,bh=(y1+1)*g-by0,mxs=Math.max(bw,bh),cx=bx0+bw/2,cy=by0+bh/2;
+    let N=512,side;
+    if(fast)side=Math.max(96,mxs*3);
+    else if(!fixedN&&mxs*1.8<=300){N=256;side=Math.max(256,mxs*1.8)}
+    else side=Math.max(512,mxs*1.8);
+    side=Math.min(Math.round(side),Math.min(W,H));
+    const sx=Math.round(Math.min(Math.max(0,cx-side/2),W-side)),sy=Math.round(Math.min(Math.max(0,cy-side/2),H-side));
+    const cropC=mk(side,side);cropC.getContext('2d').drawImage(ic,sx,sy,side,side,0,0,side,side);
+    const em=mk(side,side);em.getContext('2d').drawImage(mc,sx,sy,side,side,0,0,side,side);
+    const dm=mk(side,side),dx=dm.getContext('2d'),r=Math.max(2,Math.round(side/(fast?100:200)));
+    for(let u=-1;u<=1;u++)for(let v=-1;v<=1;v++)dx.drawImage(em,u*r,v*r);
+    out.push({side,sx,sy,N,cropC,dm,mode})}
+  return out}
+
+async function runAI(c,N){
+  const ci=mk(N,N),cx2=ci.getContext('2d',{willReadFrequently:true});cx2.imageSmoothingQuality='high';cx2.drawImage(c.cropC,0,0,N,N);
+  const cm=mk(N,N),cmx=cm.getContext('2d',{willReadFrequently:true});cmx.drawImage(c.dm,0,0,N,N);
+  const id=cx2.getImageData(0,0,N,N).data,md=cmx.getImageData(0,0,N,N).data,P=N*N;
+  const fi=new Float32Array(3*P),fm=new Float32Array(P);
+  for(let i=0;i<P;i++){fi[i]=id[i*4]/255;fi[P+i]=id[i*4+1]/255;fi[2*P+i]=id[i*4+2]/255;fm[i]=md[i*4+3]>30?1:0}
+  const se=await getSess(),nm=se.inputNames;
+  const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
+  const out=await se.run({[iN]:new ort.Tensor('float32',fi,[1,3,N,N]),[mN]:new ort.Tensor('float32',fm,[1,1,N,N])});
+  const o=out[se.outputNames[0]].data;
+  let mxv=0;for(let i=0;i<P;i+=97)mxv=Math.max(mxv,o[i],o[P+i],o[2*P+i]);
+  const sc=mxv<=2?255:1,oc=mk(N,N),ox=oc.getContext('2d'),od=ox.createImageData(N,N);
+  for(let i=0;i<P;i++){od.data[i*4]=o[i]*sc;od.data[i*4+1]=o[P+i]*sc;od.data[i*4+2]=o[2*P+i]*sc;od.data[i*4+3]=255}
+  ox.putImageData(od,0,0);return oc}
+
+async function runComp(c){
+  const side=c.side;let t;
+  if(c.mode==='fast'){
+    const id2=c.cropC.getContext('2d').getImageData(0,0,side,side),px=id2.data,md=c.dm.getContext('2d').getImageData(0,0,side,side).data,n=side*side,hole=new Uint8Array(n),f=new Float32Array(n*3);
+    for(let i=0;i<n;i++){hole[i]=md[i*4+3]>30?1:0;f[i*3]=px[i*4];f[i*3+1]=px[i*4+1];f[i*3+2]=px[i*4+2]}
+    const o=fastFill(f,side,side,hole);
+    for(let i=0;i<n;i++)if(hole[i]){px[i*4]=o[i*3];px[i*4+1]=o[i*3+1];px[i*4+2]=o[i*3+2]}
     t=mk(side,side);t.getContext('2d').putImageData(id2,0,0);
   }else{
-    const N=512,ci=mk(N,N),cx2=ci.getContext('2d',{willReadFrequently:true});cx2.imageSmoothingQuality='high';
-    cx2.drawImage(ic,sx,sy,side,side,0,0,N,N);
-    const cm=mk(N,N),cmx=cm.getContext('2d',{willReadFrequently:true});cmx.drawImage(dm,0,0,N,N);
-    const id=cx2.getImageData(0,0,N,N).data,md=cmx.getImageData(0,0,N,N).data,P=N*N;
-    const fi=new Float32Array(3*P),fm=new Float32Array(P);
-    for(let i=0;i<P;i++){fi[i]=id[i*4]/255;fi[P+i]=id[i*4+1]/255;fi[2*P+i]=id[i*4+2]/255;fm[i]=md[i*4+3]>30?1:0}
-    const se=await getSess(),nm=se.inputNames;
-    const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
-    const out=await se.run({[iN]:new ort.Tensor('float32',fi,[1,3,N,N]),[mN]:new ort.Tensor('float32',fm,[1,1,N,N])});
-    const o=out[se.outputNames[0]].data;
-    let mxv=0;for(let i=0;i<P;i+=97)mxv=Math.max(mxv,o[i],o[P+i],o[2*P+i]);
-    const sc=mxv<=2?255:1,oc=mk(N,N),ox=oc.getContext('2d'),od=ox.createImageData(N,N);
-    for(let i=0;i<P;i++){od.data[i*4]=o[i]*sc;od.data[i*4+1]=o[P+i]*sc;od.data[i*4+2]=o[2*P+i]*sc;od.data[i*4+3]=255}
-    ox.putImageData(od,0,0);
-    t=mk(side,side);const tc=t.getContext('2d');tc.imageSmoothingQuality='high';tc.drawImage(oc,0,0,side,side);
-  }
-  const bm=mk(side,side),bmx=bm.getContext('2d');bmx.filter='blur('+Math.max(1,side/400)+'px)';bmx.drawImage(dm,0,0);
-  const tx2=t.getContext('2d');tx2.globalCompositeOperation='destination-in';tx2.drawImage(bm,0,0);
-  ix.drawImage(t,sx,sy);
-  mx.clearRect(0,0,W,H);return true}
+    let o;try{o=await runAI(c,c.N)}catch(e){if(c.N===256){fixedN=true;o=await runAI(c,512)}else throw e}
+    t=mk(side,side);const tc=t.getContext('2d');tc.imageSmoothingQuality='high';tc.drawImage(o,0,0,side,side)}
+  const bm=mk(side,side),b2=bm.getContext('2d');b2.filter='blur('+Math.max(1,side/400)+'px)';b2.drawImage(c.dm,0,0);
+  const t2=t.getContext('2d');t2.globalCompositeOperation='destination-in';t2.drawImage(bm,0,0);return t}
 
+/* immediate preview on current photo */
 $('er').onclick=async()=>{
-  busy(mode==='fast'||sessP?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');
-  await new Promise(r=>setTimeout(r,30));
-  try{snap();if(!await erase())undo.pop()}catch(e){undo.pop();alert('ত্রুটি: '+e.message+'\n(মেমোরি কম হলে অন্য ট্যাব বন্ধ করে আবার চেষ্টা করুন)')}
+  if(!ready)return;const comps=buildComps();if(!comps.length)return;
+  busy(mode==='fast'||sessP?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');await new Promise(r=>setTimeout(r,30));
+  try{snap();for(const c of comps)ix.drawImage(await runComp(c),c.sx,c.sy);mx.clearRect(0,0,W,H);dirty=true}
+  catch(e){undo.pop();alert('ত্রুটি: '+e.message)}
   busy(0)};
 
-/* ---------- Done / save ---------- */
-function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-$('dn').onclick=async()=>{
-  busy('সেভ হচ্ছে…');await new Promise(r=>setTimeout(r,20));
-  let src=ic;
-  if(crop){const c=mk(OW,OH),x=c.getContext('2d');x.imageSmoothingQuality='high';
-    x.drawImage(ic,(fr.x-tx)/s,(fr.y-ty)/s,fr.w/s,fr.h/s,0,0,OW,OH);src=c}
-  const t=/png/i.test(cur.type)?'image/png':/webp/i.test(cur.type)?'image/webp':'image/jpeg';
-  let name=cur.name;
-  if(!(t==='image/jpeg'?/\.jpe?g$/i.test(name):cur.type===t))name=name.replace(/\.[^.]+$/,'')+'.'+(t==='image/png'?'png':t==='image/webp'?'webp':'jpg');
-  if(used.has(name.toLowerCase())){const m=name.match(/^(.*)(\.[^.]+)$/);let n=2,nn;do{nn=m[1]+' ('+n+++')'+m[2]}while(used.has(nn.toLowerCase()));name=nn}
-  used.add(name.toLowerCase());
-  const blob=await new Promise(r=>src.toBlob(r,t,0.97));
-  results.push({name,blob});
-  if(dirH){try{const fh=await dirH.getFileHandle(name,{create:true}),w=await fh.createWritable();await w.write(blob);await w.close()}catch(e){alert('ফোল্ডারে সেভ হয়নি: '+e.message)}}
-  if($('adl').checked)dl(blob,name);
-  idx++;await load()};
+/* ---------- Background queue ---------- */
+const q=[];let running=false;
+function upd(){const n=q.length+(running?1:0),t=n?'⏳ '+n+' কাজ চলছে':'';$('qs').textContent=t;$('gq').textContent=t||'✓ সব কাজ শেষ';if(!$('gv').hidden)render()}
+function enqueue(p,comps,W0,H0){p.jobs++;p.err=null;q.push({p,comps,W0,H0});upd();pump()}
+async function pump(){
+  if(running)return;running=true;
+  while(q.length){const j=q.shift();
+    try{await runJob(j);j.p.state='done'}catch(e){j.p.err=e.message||'ত্রুটি';console.error(e)}
+    j.p.jobs--;j.p.thumb=null;if(!j.p.jobs){j.p.w.forEach(r=>r());j.p.w=[]}upd()}
+  running=false;upd()}
+async function runJob({p,comps,W0,H0}){
+  const ts=[];for(const c of comps)ts.push([c,await runComp(c)]);
+  const bmp=await createImageBitmap(p.blob,{imageOrientation:'from-image'});
+  const cv=mk(W0,H0),x=cv.getContext('2d');x.drawImage(bmp,0,0,W0,H0);bmp.close&&bmp.close();
+  for(const[c,t]of ts)x.drawImage(t,c.sx,c.sy);
+  p.blob=await blobOf(cv,p.type)}
 
-function finish(){$('ed').hidden=true;$('fin').hidden=false;busy(0);$('fst').textContent=results.length+' টি ছবি প্রস্তুত।'}
-$('zip').onclick=async()=>{const z=new JSZip();results.forEach(r=>z.file(r.name,r.blob));
-  $('zip').disabled=true;const b=await z.generateAsync({type:'blob',compression:'STORE'});$('zip').disabled=false;dl(b,'cleaned_photos.zip')};
-$('shr').onclick=async()=>{const fl=results.map(r=>new File([r.blob],r.name,{type:r.blob.type}));
-  try{if(navigator.canShare&&navigator.canShare({files:fl}))await navigator.share({files:fl});else alert('শেয়ার সাপোর্ট নেই, ZIP ব্যবহার করুন')}catch(e){}};
-$('rs').onclick=()=>{files=[];results=[];$('pst').textContent='কোনো ছবি নেই';$('pf').value='';$('fin').hidden=true;$('home').hidden=false;refresh()};
-addEventListener('beforeunload',e=>{if(results.length&&$('fin').hidden){e.preventDefault();e.returnValue=''}});
+/* ---------- Grid / review ---------- */
+function cropFor(p,w,h){
+  if(!(OW&&OH))return[0,0,w,h];
+  if(p.crop)return[p.crop.x*w,p.crop.y*h,p.crop.w*w,p.crop.h*h];
+  const ar=OW/OH;let cw=w,ch=h;if(w/h>ar)cw=h*ar;else ch=w/ar;return[(w-cw)/2,(h-ch)/2,cw,ch]}
+async function mkThumb(p){
+  const bmp=await createImageBitmap(p.blob,{imageOrientation:'from-image'});
+  const[x,y,w,h]=cropFor(p,bmp.width,bmp.height),k=220/Math.max(w,h),c=mk(Math.max(1,Math.round(w*k)),Math.max(1,Math.round(h*k)));
+  c.getContext('2d').drawImage(bmp,x,y,w,h,0,0,c.width,c.height);bmp.close&&bmp.close();return c}
+let gtok=0;
+async function showGrid(){cur=-1;ready=false;$('ed').hidden=true;$('gv').hidden=false;
+  $('sst').textContent=(dirH?'ফোল্ডারে সেভ হবে: '+dirH.name:'ZIP ফাইলে সেভ হবে')+' · ছবিতে চাপ দিলে আবার এডিট করা যাবে';upd()}
+function render(){
+  const tok=++gtok,g=$('gg'),sy=g.scrollTop;g.innerHTML='';
+  const items=photos.map((p,i)=>{const d=document.createElement('div');d.className='cd';
+    const t=p.err?' ⚠':p.jobs?' ⏳':p.state==='done'?' ✓':'';
+    d.innerHTML='<canvas></canvas><span class="bg">'+(i+1)+t+'</span>';
+    d.onclick=()=>openPhoto(i);g.appendChild(d);return d});
+  g.scrollTop=sy;
+  (async()=>{for(let i=0;i<photos.length;i++){
+    if(tok!==gtok)return;const p=photos[i];
+    if(!p.thumb&&!p.jobs){try{p.thumb=await mkThumb(p)}catch(e){}}
+    if(tok!==gtok)return;
+    if(p.thumb){const c=items[i].firstChild;c.width=p.thumb.width;c.height=p.thumb.height;c.getContext('2d').drawImage(p.thumb,0,0)}}})()}
+$('gbk').onclick=()=>openPhoto(Math.max(0,Math.min(photos.length-1,cur<0?0:cur)));
+
+/* ---------- Save ---------- */
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+async function renderFinal(p){
+  if(!(OW&&OH)&&p.blob===p.file)return p.file;
+  const bmp=await createImageBitmap(p.blob,{imageOrientation:'from-image'});
+  const[x,y,w,h]=cropFor(p,bmp.width,bmp.height),ow=OW||bmp.width,oh=OH||bmp.height,c=mk(ow,oh),cx=c.getContext('2d');
+  cx.imageSmoothingQuality='high';cx.drawImage(bmp,x,y,w,h,0,0,ow,oh);bmp.close&&bmp.close();return blobOf(c,p.type)}
+function outName(p,used){
+  let n=p.name;const t=mt(p.type),ext=t==='image/png'?'png':t==='image/webp'?'webp':'jpg';
+  if(!(t==='image/jpeg'?/\.jpe?g$/i.test(n):p.type===t))n=n.replace(/\.[^.]+$/,'')+'.'+ext;
+  if(used.has(n.toLowerCase())){const m=n.match(/^(.*)(\.[^.]+)$/);let k=2,nn;do{nn=m[1]+' ('+k+++')'+m[2]}while(used.has(nn.toLowerCase()));n=nn}
+  used.add(n.toLowerCase());return n}
+$('sv').onclick=async()=>{
+  const b=$('sv'),st=$('sst');b.disabled=true;
+  try{
+    while(running||q.length){st.textContent='ব্যাকগ্রাউন্ড কাজ শেষ হওয়ার অপেক্ষা… ('+(q.length+1)+')';await new Promise(r=>setTimeout(r,400))}
+    const z=dirH?null:new JSZip(),used=new Set();
+    for(let i=0;i<photos.length;i++){
+      st.textContent='সেভ হচ্ছে '+(i+1)+' / '+photos.length;
+      const p=photos[i],blob=await renderFinal(p),name=outName(p,used);
+      if(dirH){const fh=await dirH.getFileHandle(name,{create:true}),w=await fh.createWritable();await w.write(blob);await w.close()}
+      else z.file(name,blob)}
+    if(z){st.textContent='ZIP বানাচ্ছে…';dl(await z.generateAsync({type:'blob',compression:'STORE'}),'cleaned_photos.zip')}
+    st.textContent='✓ সব সেভ হয়েছে ('+photos.length+' টি)'
+  }catch(e){alert('সেভ ত্রুটি: '+e.message);st.textContent=''}
+  b.disabled=false};
+$('rs').onclick=()=>{if(!confirm('নতুন ব্যাচ শুরু করবেন? সেভ না করা এডিট হারিয়ে যাবে।'))return;
+  photos=[];files=[];q.length=0;cur=-1;$('pst').textContent='কোনো ছবি নেই';$('pf').value='';$('gv').hidden=true;$('ed').hidden=true;$('home').hidden=false;refresh()};
+addEventListener('beforeunload',e=>{if(photos.some(p=>p.state==='done')||running){e.preventDefault();e.returnValue=''}});
 setMode(mode);checkModel();
 </script>
 </body>
