@@ -30,7 +30,7 @@ progress{width:100%;height:8px}
 #msk{opacity:.55}
 #fr{position:absolute;pointer-events:none;border:2px solid var(--ac);box-shadow:0 0 0 999px #000b;background:linear-gradient(#fff4,#fff4) 33.3% 0/1px 100% no-repeat,linear-gradient(#fff4,#fff4) 66.6% 0/1px 100% no-repeat,linear-gradient(#fff4,#fff4) 0 33.3%/100% 1px no-repeat,linear-gradient(#fff4,#fff4) 0 66.6%/100% 1px no-repeat}
 input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0;width:100%}
-.ps.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+.ps.on,.mdb.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
 #bar{background:var(--panel);border-top:1px solid var(--line);padding:10px 12px max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
 #bar .row button{padding:10px 6px;font-size:15px}
 .sl{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mu)}.sl input{flex:1;accent-color:var(--ac)}
@@ -47,7 +47,7 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
 
   <div class="card">
     <h2>ধাপ ১: AI মডেল (একবারই)</h2>
-    <div id="mst" class="st">চেক হচ্ছে…</div>
+    <div id="mst" class="st">চেক হচ্ছে…</div><div id="ast" class="st"></div>
     <progress id="mpg" max="1" value="0" hidden></progress>
     <div class="row">
       <label class="b">ফাইল সিলেক্ট (.onnx)<input id="mf" type="file" accept=".onnx" hidden></label>
@@ -80,6 +80,7 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
     <div id="busy" hidden><div class="sp"></div><div id="bt">প্রসেস হচ্ছে…</div></div>
   </div>
   <div id="bar">
+    <div class="row" id="md"><button class="mdb" data-m="fast">⚡ দ্রুত</button><button class="mdb" data-m="ai">🧠 AI (নিখুঁত)</button></div>
     <div class="sl">ব্রাশ <input id="bs" type="range" min="6" max="80" value="24"><span id="bv">24</span></div>
     <div class="row">
       <button id="un">↶ আনডু</button>
@@ -102,10 +103,14 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
+if('serviceWorker' in navigator&&!self.crossOriginIsolated){
+  navigator.serviceWorker.register('coi-serviceworker.js').then(async()=>{await navigator.serviceWorker.ready;
+    if(!navigator.serviceWorker.controller&&!sessionStorage.getItem('coi')){sessionStorage.setItem('coi','1');location.reload()}}).catch(()=>{});
+}
 const $=id=>document.getElementById(id);
 const MODEL_URL='https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx';
 const MAXSIDE=5000;
-let files=[],idx=0,results=[],sess=null,hasModel=false;
+let files=[],idx=0,results=[],sessP=null,hasModel=false,mode='fast';
 let W=0,H=0,s=1,tx=0,ty=0,undo=[],cur=null,OW=0,OH=0,fr={x:0,y:0,w:0,h:0},minS=1,crop=false,dirH=null,used=new Set();
 const ic=$('img'),mc=$('msk'),ix=ic.getContext('2d',{willReadFrequently:true}),mx=mc.getContext('2d',{willReadFrequently:true});
 const bk=document.createElement('canvas'),bx=bk.getContext('2d');
@@ -115,15 +120,23 @@ const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('bulkeraser',1);r.o
 async function dbGet(k){const d=await idb();return new Promise(r=>{const q=d.transaction('k').objectStore('k').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()})}
 async function dbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('k','readwrite');t.objectStore('k').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 
+/* ---------- Mode ---------- */
+try{mode=localStorage.getItem('mode')||'fast'}catch(e){}
+function setMode(m){mode=m;try{localStorage.setItem('mode',m)}catch(e){}
+  document.querySelectorAll('.mdb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));preload()}
+document.querySelectorAll('.mdb').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+function preload(){if(mode==='ai'&&hasModel&&!sessP){$('ast').textContent='AI ইঞ্জিন প্রস্তুত হচ্ছে…';
+  getSess().then(()=>{$('ast').textContent='AI ইঞ্জিন প্রস্তুত ✓'+(self.crossOriginIsolated?' (মাল্টি-থ্রেড)':'')}).catch(()=>{$('ast').textContent=''})}}
+
 /* ---------- Home ---------- */
 function refresh(){$('go').disabled=!(hasModel&&files.length)}
 async function checkModel(){
   try{const b=await dbGet('lama');hasModel=!!b;
     $('mst').textContent=hasModel?'মডেল তৈরি ✓ ('+Math.round(b.byteLength/1048576)+' MB)':'মডেল নেই। নিচ থেকে ফাইল দিন বা নামান।';
     $('mst').className='st'+(hasModel?' ok':'')}catch(e){$('mst').textContent='স্টোরেজ ত্রুটি: '+e.message}
-  refresh()}
+  refresh();preload()}
 $('mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  $('mst').textContent='সেভ হচ্ছে…';try{await dbSet('lama',await f.arrayBuffer());sess=null}catch(x){alert('সেভ হয়নি: '+x.message)}checkModel()};
+  $('mst').textContent='সেভ হচ্ছে…';try{await dbSet('lama',await f.arrayBuffer());sessP=null}catch(x){alert('সেভ হয়নি: '+x.message)}checkModel()};
 $('mdl').onclick=async()=>{
   const pg=$('mpg');pg.hidden=false;pg.value=0;$('mst').textContent='নামছে…';
   try{const r=await fetch(MODEL_URL);if(!r.ok)throw new Error('HTTP '+r.status);
@@ -131,7 +144,7 @@ $('mdl').onclick=async()=>{
     for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);got+=value.length;
       if(tot){pg.value=got/tot;$('mst').textContent='নামছে… '+Math.round(got/1048576)+' / '+Math.round(tot/1048576)+' MB'}}
     $('mst').textContent='সেভ হচ্ছে…';
-    await dbSet('lama',await new Blob(ch).arrayBuffer());sess=null
+    await dbSet('lama',await new Blob(ch).arrayBuffer());sessP=null
   }catch(e){alert('ডাউনলোড ব্যর্থ: '+e.message+'\nলিংক থেকে ফাইল নামিয়ে "ফাইল সিলেক্ট" দিন:\n'+MODEL_URL)}
   pg.hidden=true;checkModel()};
 $('pf').onchange=e=>{files=[...e.target.files];$('pst').textContent=files.length?files.length+' টি ছবি সিলেক্ট হয়েছে':'কোনো ছবি নেই';refresh()};
@@ -209,50 +222,74 @@ function snap(){const c=document.createElement('canvas');c.width=W;c.height=H;c.
 $('un').onclick=()=>{const c=undo.pop();if(c){ix.clearRect(0,0,W,H);ix.drawImage(c,0,0)}else mx.clearRect(0,0,W,H)};
 
 /* ---------- LaMa inpaint ---------- */
-async function getSess(){
-  if(sess)return sess;
-  const buf=await dbGet('lama');if(!buf)throw new Error('মডেল নেই');
-  ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
-  ort.env.wasm.numThreads=self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1;
-  sess=await ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:['wasm'],graphOptimizationLevel:'all'});
-  return sess}
+function getSess(){
+  if(!sessP){sessP=(async()=>{
+    const buf=await dbGet('lama');if(!buf)throw new Error('মডেল নেই');
+    ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
+    const th=self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1;
+    const mkS=n=>{ort.env.wasm.numThreads=n;return ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:['wasm'],graphOptimizationLevel:'basic'})};
+    try{return await mkS(th)}catch(e){if(th>1)return await mkS(1);throw e}
+  })();sessP.catch(()=>{sessP=null})}
+  return sessP}
 const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+
+function fastFill(c,w,h,hole){
+  const N=w*h;let cc=new Float32Array(N*3),aa=new Float32Array(N);
+  for(let i=0;i<N;i++)if(!hole[i]){cc[i*3]=c[i*3];cc[i*3+1]=c[i*3+1];cc[i*3+2]=c[i*3+2];aa[i]=1}
+  let cw=w,ch=h;const L=[[cc,aa,cw,ch]];
+  while(cw>1||ch>1){const nw=(cw+1)>>1,nh=(ch+1)>>1,nc=new Float32Array(nw*nh*3),na=new Float32Array(nw*nh);
+    for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){const i=y*cw+x,j=(y>>1)*nw+(x>>1);na[j]+=aa[i];nc[j*3]+=cc[i*3];nc[j*3+1]+=cc[i*3+1];nc[j*3+2]+=cc[i*3+2]}
+    cc=nc;aa=na;cw=nw;ch=nh;L.push([cc,aa,cw,ch])}
+  for(let k=L.length-2;k>=0;k--){const[fc,fa,fw,fh]=L[k],[pc,pa,pw]=L[k+1];
+    for(let y=0;y<fh;y++)for(let x=0;x<fw;x++){const i=y*fw+x;if(fa[i]===0){const j=(y>>1)*pw+(x>>1),d=pa[j]||1;
+      fc[i*3]=pc[j*3]/d;fc[i*3+1]=pc[j*3+1]/d;fc[i*3+2]=pc[j*3+2]/d;fa[i]=1}}}
+  const o=L[0][0];
+  for(let it=0;it<40;it++)for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(!hole[i])continue;
+    const l=x>0?i-1:i,r=x<w-1?i+1:i,u=y>0?i-w:i,d=y<h-1?i+w:i;
+    for(let k=0;k<3;k++)o[i*3+k]=(o[l*3+k]+o[r*3+k]+o[u*3+k]+o[d*3+k])/4}
+  return o}
 
 async function erase(){
   const d=mx.getImageData(0,0,W,H).data;let x0=W,y0=H,x1=-1,y1=-1;
   for(let y=0;y<H;y++){const o=y*W*4+3;for(let x=0;x<W;x++){if(d[o+x*4]>20){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}}
   if(x1<0)return false;
-  const bw=x1-x0+1,bh=y1-y0+1,cx=(x0+x1)/2,cy=(y0+y1)/2;
-  const side=Math.min(Math.round(Math.max(512,Math.max(bw,bh)*1.8)),Math.min(W,H));
+  const fast=mode==='fast',bw=x1-x0+1,bh=y1-y0+1,cx=(x0+x1)/2,cy=(y0+y1)/2,mxs=Math.max(bw,bh);
+  const side=Math.min(Math.round(fast?Math.max(96,mxs*3):Math.max(512,mxs*1.8)),Math.min(W,H));
   const sx=Math.round(Math.min(Math.max(0,cx-side/2),W-side)),sy=Math.round(Math.min(Math.max(0,cy-side/2),H-side));
-  // dilated mask for the crop
   const em=mk(side,side);em.getContext('2d').drawImage(mc,sx,sy,side,side,0,0,side,side);
-  const dm=mk(side,side),dx=dm.getContext('2d'),r=Math.max(2,Math.round(side/200));
+  const dm=mk(side,side),dx=dm.getContext('2d',{willReadFrequently:true}),r=Math.max(2,Math.round(side/(fast?100:200)));
   for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)dx.drawImage(em,a*r,b*r);
-  // model inputs
-  const N=512,ci=mk(N,N),cx2=ci.getContext('2d',{willReadFrequently:true});cx2.imageSmoothingQuality='high';
-  cx2.drawImage(ic,sx,sy,side,side,0,0,N,N);
-  const cm=mk(N,N),cmx=cm.getContext('2d',{willReadFrequently:true});cmx.drawImage(dm,0,0,N,N);
-  const id=cx2.getImageData(0,0,N,N).data,md=cmx.getImageData(0,0,N,N).data,P=N*N;
-  const fi=new Float32Array(3*P),fm=new Float32Array(P);
-  for(let i=0;i<P;i++){fi[i]=id[i*4]/255;fi[P+i]=id[i*4+1]/255;fi[2*P+i]=id[i*4+2]/255;fm[i]=md[i*4+3]>30?1:0}
-  const se=await getSess(),nm=se.inputNames;
-  const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
-  const out=await se.run({[iN]:new ort.Tensor('float32',fi,[1,3,N,N]),[mN]:new ort.Tensor('float32',fm,[1,1,N,N])});
-  const o=out[se.outputNames[0]].data;
-  let mxv=0;for(let i=0;i<P;i+=97)mxv=Math.max(mxv,o[i],o[P+i],o[2*P+i]);
-  const sc=mxv<=2?255:1,oc=mk(N,N),ox=oc.getContext('2d'),od=ox.createImageData(N,N);
-  for(let i=0;i<P;i++){od.data[i*4]=o[i]*sc;od.data[i*4+1]=o[P+i]*sc;od.data[i*4+2]=o[2*P+i]*sc;od.data[i*4+3]=255}
-  ox.putImageData(od,0,0);
-  // composite only masked area, feathered
-  const t=mk(side,side),tx2=t.getContext('2d');tx2.imageSmoothingQuality='high';tx2.drawImage(oc,0,0,side,side);
+  let t;
+  if(fast){
+    const id2=ix.getImageData(sx,sy,side,side),px=id2.data,md=dx.getImageData(0,0,side,side).data,N=side*side,hole=new Uint8Array(N),c=new Float32Array(N*3);
+    for(let i=0;i<N;i++){hole[i]=md[i*4+3]>30?1:0;c[i*3]=px[i*4];c[i*3+1]=px[i*4+1];c[i*3+2]=px[i*4+2]}
+    const o=fastFill(c,side,side,hole);
+    for(let i=0;i<N;i++)if(hole[i]){px[i*4]=o[i*3];px[i*4+1]=o[i*3+1];px[i*4+2]=o[i*3+2]}
+    t=mk(side,side);t.getContext('2d').putImageData(id2,0,0);
+  }else{
+    const N=512,ci=mk(N,N),cx2=ci.getContext('2d',{willReadFrequently:true});cx2.imageSmoothingQuality='high';
+    cx2.drawImage(ic,sx,sy,side,side,0,0,N,N);
+    const cm=mk(N,N),cmx=cm.getContext('2d',{willReadFrequently:true});cmx.drawImage(dm,0,0,N,N);
+    const id=cx2.getImageData(0,0,N,N).data,md=cmx.getImageData(0,0,N,N).data,P=N*N;
+    const fi=new Float32Array(3*P),fm=new Float32Array(P);
+    for(let i=0;i<P;i++){fi[i]=id[i*4]/255;fi[P+i]=id[i*4+1]/255;fi[2*P+i]=id[i*4+2]/255;fm[i]=md[i*4+3]>30?1:0}
+    const se=await getSess(),nm=se.inputNames;
+    const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
+    const out=await se.run({[iN]:new ort.Tensor('float32',fi,[1,3,N,N]),[mN]:new ort.Tensor('float32',fm,[1,1,N,N])});
+    const o=out[se.outputNames[0]].data;
+    let mxv=0;for(let i=0;i<P;i+=97)mxv=Math.max(mxv,o[i],o[P+i],o[2*P+i]);
+    const sc=mxv<=2?255:1,oc=mk(N,N),ox=oc.getContext('2d'),od=ox.createImageData(N,N);
+    for(let i=0;i<P;i++){od.data[i*4]=o[i]*sc;od.data[i*4+1]=o[P+i]*sc;od.data[i*4+2]=o[2*P+i]*sc;od.data[i*4+3]=255}
+    ox.putImageData(od,0,0);
+    t=mk(side,side);const tc=t.getContext('2d');tc.imageSmoothingQuality='high';tc.drawImage(oc,0,0,side,side);
+  }
   const bm=mk(side,side),bmx=bm.getContext('2d');bmx.filter='blur('+Math.max(1,side/400)+'px)';bmx.drawImage(dm,0,0);
-  tx2.globalCompositeOperation='destination-in';tx2.drawImage(bm,0,0);
+  const tx2=t.getContext('2d');tx2.globalCompositeOperation='destination-in';tx2.drawImage(bm,0,0);
   ix.drawImage(t,sx,sy);
   mx.clearRect(0,0,W,H);return true}
 
 $('er').onclick=async()=>{
-  busy(sess?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');
+  busy(mode==='fast'||sessP?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');
   await new Promise(r=>setTimeout(r,30));
   try{snap();if(!await erase())undo.pop()}catch(e){undo.pop();alert('ত্রুটি: '+e.message+'\n(মেমোরি কম হলে অন্য ট্যাব বন্ধ করে আবার চেষ্টা করুন)')}
   busy(0)};
@@ -282,7 +319,7 @@ $('shr').onclick=async()=>{const fl=results.map(r=>new File([r.blob],r.name,{typ
   try{if(navigator.canShare&&navigator.canShare({files:fl}))await navigator.share({files:fl});else alert('শেয়ার সাপোর্ট নেই, ZIP ব্যবহার করুন')}catch(e){}};
 $('rs').onclick=()=>{files=[];results=[];$('pst').textContent='কোনো ছবি নেই';$('pf').value='';$('fin').hidden=true;$('home').hidden=false;refresh()};
 addEventListener('beforeunload',e=>{if(results.length&&$('fin').hidden){e.preventDefault();e.returnValue=''}});
-checkModel();
+setMode(mode);checkModel();
 </script>
 </body>
 </html>
