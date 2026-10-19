@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#14181c">
+<title>বাল্ক ইরেজার</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#14181c;--panel:#1e252b;--line:#2f3a42;--tx:#e8eef2;--mu:#8fa0ab;--ac:#3ddc97;--ac2:#0b3d2a;--wr:#ff6b5e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,"Noto Sans Bengali","Hind Siliguri",sans-serif;overscroll-behavior:none}
+[hidden]{display:none!important}
+button,label.b{font:inherit;color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+button.p{background:var(--ac);color:var(--ac2);border-color:var(--ac);font-weight:700}
+button:disabled{opacity:.4}
+#home,#fin{padding:max(18px,env(safe-area-inset-top)) 18px 24px;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:26px;margin:6px 0 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card h2{font-size:15px;margin:0;color:var(--mu);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+.st{font-size:14px;color:var(--mu)}.st.ok{color:var(--ac)}
+progress{width:100%;height:8px}
+#ed{position:fixed;inset:0;display:flex;flex-direction:column;background:#0c0f12}
+#top{display:flex;align-items:center;gap:10px;padding:max(8px,env(safe-area-inset-top)) 12px 8px;font-size:15px}
+#top b{flex:1}
+#stage{flex:1;position:relative;overflow:hidden;touch-action:none;background:repeating-conic-gradient(#171c21 0 25%,#1b2127 0 50%) 0 0/20px 20px}
+#wrap{position:absolute;left:0;top:0;transform-origin:0 0}
+#wrap canvas{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:auto}
+#msk{opacity:.55}
+#fr{position:absolute;pointer-events:none;border:2px solid var(--ac);box-shadow:0 0 0 999px #000b;background:linear-gradient(#fff4,#fff4) 33.3% 0/1px 100% no-repeat,linear-gradient(#fff4,#fff4) 66.6% 0/1px 100% no-repeat,linear-gradient(#fff4,#fff4) 0 33.3%/100% 1px no-repeat,linear-gradient(#fff4,#fff4) 0 66.6%/100% 1px no-repeat}
+input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0;width:100%}
+.ps.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+#bar{background:var(--panel);border-top:1px solid var(--line);padding:10px 12px max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+#bar .row button{padding:10px 6px;font-size:15px}
+.sl{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mu)}.sl input{flex:1;accent-color:var(--ac)}
+#busy{position:absolute;inset:0;background:#000a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:9;text-align:center;padding:20px}
+.sp{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--ac);border-radius:50%;animation:r 0.8s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="home">
+  <h1>বাল্ক ইরেজার</h1>
+  <div class="st">ছবি থেকে অবাঞ্ছিত জিনিস (পিন, দাগ) মুছুন। পাশের পিক্সেল মিলিয়ে ভরাট হবে (LaMa AI)।</div>
+
+  <div class="card">
+    <h2>ধাপ ১: AI মডেল (একবারই)</h2>
+    <div id="mst" class="st">চেক হচ্ছে…</div>
+    <progress id="mpg" max="1" value="0" hidden></progress>
+    <div class="row">
+      <label class="b">ফাইল সিলেক্ট (.onnx)<input id="mf" type="file" accept=".onnx" hidden></label>
+      <button id="mdl">ইন্টারনেট থেকে নামান</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ধাপ ২: আউটপুট সাইজ (ফ্রেম)</h2>
+    <div class="row"><button class="ps" data-w="1080" data-h="1080">১:১</button><button class="ps" data-w="900" data-h="1200">৩:৪</button><button class="ps" data-w="1080" data-h="1350">৪:৫</button><button class="ps" data-w="0" data-h="0">অরিজিনাল</button></div>
+    <div class="row"><input id="ow" type="number" min="0" placeholder="প্রস্থ px"><input id="oh" type="number" min="0" placeholder="উচ্চতা px"></div>
+    <div class="st">নিজের সাইজ লিখতে পারেন। ০ বা ফাঁকা = অরিজিনাল সাইজ (ক্রপ ছাড়া)।</div>
+  </div>
+
+  <div class="card">
+    <h2>ধাপ ৩: ছবি সিলেক্ট</h2>
+    <label class="b">একসাথে অনেক ছবি বাছুন<input id="pf" type="file" accept="image/*" multiple hidden></label>
+    <div id="pst" class="st">কোনো ছবি নেই</div>
+    <label class="st"><input id="adl" type="checkbox"> প্রতিটি Done-এ অটো ডাউনলোড (না দিলে শেষে একটি ZIP)</label>
+    <button id="fold" hidden>সেভ ফোল্ডার বাছুন (ল্যাপটপ/ডেস্কটপ)</button><div id="fst2" class="st" hidden></div>
+  </div>
+
+  <button id="go" class="p" disabled>কাজ শুরু করুন</button>
+</div>
+
+<div id="ed" hidden>
+  <div id="top"><b id="cnt"></b><span id="nm" class="st"></span></div>
+  <div id="stage"><div id="wrap"><canvas id="img"></canvas><canvas id="msk"></canvas></div>
+    <div id="fr" hidden></div>
+    <div id="busy" hidden><div class="sp"></div><div id="bt">প্রসেস হচ্ছে…</div></div>
+  </div>
+  <div id="bar">
+    <div class="sl">ব্রাশ <input id="bs" type="range" min="6" max="80" value="24"><span id="bv">24</span></div>
+    <div class="row">
+      <button id="un">↶ আনডু</button>
+      <button id="cl">দাগ মুছুন</button>
+      <button id="rv">⟲ ফিট</button>
+      <button id="er" class="p">ইরেজ</button>
+    </div>
+    <button id="dn" class="p">Done ও পরের ছবি</button>
+  </div>
+</div>
+
+<div id="fin" hidden>
+  <h1>সব শেষ ✓</h1>
+  <div id="fst" class="st"></div>
+  <button id="zip" class="p">ZIP ডাউনলোড</button>
+  <button id="shr">শেয়ার / গ্যালারিতে সেভ</button>
+  <button id="rs">নতুন ব্যাচ</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const MODEL_URL='https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx';
+const MAXSIDE=5000;
+let files=[],idx=0,results=[],sess=null,hasModel=false;
+let W=0,H=0,s=1,tx=0,ty=0,undo=[],cur=null,OW=0,OH=0,fr={x:0,y:0,w:0,h:0},minS=1,crop=false,dirH=null,used=new Set();
+const ic=$('img'),mc=$('msk'),ix=ic.getContext('2d',{willReadFrequently:true}),mx=mc.getContext('2d',{willReadFrequently:true});
+const bk=document.createElement('canvas'),bx=bk.getContext('2d');
+
+/* ---------- IndexedDB ---------- */
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('bulkeraser',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function dbGet(k){const d=await idb();return new Promise(r=>{const q=d.transaction('k').objectStore('k').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()})}
+async function dbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('k','readwrite');t.objectStore('k').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+
+/* ---------- Home ---------- */
+function refresh(){$('go').disabled=!(hasModel&&files.length)}
+async function checkModel(){
+  try{const b=await dbGet('lama');hasModel=!!b;
+    $('mst').textContent=hasModel?'মডেল তৈরি ✓ ('+Math.round(b.byteLength/1048576)+' MB)':'মডেল নেই। নিচ থেকে ফাইল দিন বা নামান।';
+    $('mst').className='st'+(hasModel?' ok':'')}catch(e){$('mst').textContent='স্টোরেজ ত্রুটি: '+e.message}
+  refresh()}
+$('mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  $('mst').textContent='সেভ হচ্ছে…';try{await dbSet('lama',await f.arrayBuffer());sess=null}catch(x){alert('সেভ হয়নি: '+x.message)}checkModel()};
+$('mdl').onclick=async()=>{
+  const pg=$('mpg');pg.hidden=false;pg.value=0;$('mst').textContent='নামছে…';
+  try{const r=await fetch(MODEL_URL);if(!r.ok)throw new Error('HTTP '+r.status);
+    const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),ch=[];let got=0;
+    for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);got+=value.length;
+      if(tot){pg.value=got/tot;$('mst').textContent='নামছে… '+Math.round(got/1048576)+' / '+Math.round(tot/1048576)+' MB'}}
+    $('mst').textContent='সেভ হচ্ছে…';
+    await dbSet('lama',await new Blob(ch).arrayBuffer());sess=null
+  }catch(e){alert('ডাউনলোড ব্যর্থ: '+e.message+'\nলিংক থেকে ফাইল নামিয়ে "ফাইল সিলেক্ট" দিন:\n'+MODEL_URL)}
+  pg.hidden=true;checkModel()};
+$('pf').onchange=e=>{files=[...e.target.files];$('pst').textContent=files.length?files.length+' টি ছবি সিলেক্ট হয়েছে':'কোনো ছবি নেই';refresh()};
+function setPs(){const w=+$('ow').value||0,h=+$('oh').value||0;document.querySelectorAll('.ps').forEach(b=>b.classList.toggle('on',+b.dataset.w===w&&+b.dataset.h===h))}
+document.querySelectorAll('.ps').forEach(b=>b.onclick=()=>{$('ow').value=b.dataset.w;$('oh').value=b.dataset.h;setPs()});
+$('ow').oninput=$('oh').oninput=setPs;
+try{const z=JSON.parse(localStorage.getItem('sz')||'[1080,1080]');$('ow').value=z[0];$('oh').value=z[1]}catch(e){$('ow').value=$('oh').value=1080}setPs();
+if(window.showDirectoryPicker){$('fold').hidden=false;$('fold').onclick=async()=>{try{dirH=await showDirectoryPicker({mode:'readwrite'});$('fst2').hidden=false;$('fst2').textContent='সেভ ফোল্ডার: '+dirH.name+' ✓';$('fst2').className='st ok'}catch(e){}}}
+$('go').onclick=()=>{
+  OW=Math.round(+$('ow').value)||0;OH=Math.round(+$('oh').value)||0;if(!OW||!OH)OW=OH=0;
+  try{localStorage.setItem('sz',JSON.stringify([OW,OH]))}catch(e){}
+  used=new Set();idx=0;results=[];$('home').hidden=true;$('ed').hidden=false;load()};
+
+/* ---------- Image load / view ---------- */
+async function load(){
+  if(idx>=files.length)return finish();
+  const f=files[idx];busy('ছবি লোড হচ্ছে…');
+  try{
+    let bmp=await createImageBitmap(f,{imageOrientation:'from-image'});
+    let w=bmp.width,h=bmp.height,k=Math.min(1,MAXSIDE/Math.max(w,h));
+    W=Math.round(w*k);H=Math.round(h*k);
+    ic.width=mc.width=bk.width=W;ic.height=mc.height=bk.height=H;
+    ix.drawImage(bmp,0,0,W,H);bmp.close&&bmp.close();
+    mx.clearRect(0,0,W,H);undo=[];cur=f;
+    $('cnt').textContent=(idx+1)+' / '+files.length;$('nm').textContent=f.name;
+    resetView();
+  }catch(e){alert('ছবি খোলা যায়নি: '+f.name);idx++;busy(0);return load()}
+  busy(0)}
+function resetView(){
+  const st=$('stage'),sw=st.clientWidth,sh=st.clientHeight,m=14;
+  crop=OW>0&&OH>0;const ar=crop?OW/OH:W/H;
+  let fw=sw-2*m,fh=fw/ar;if(fh>sh-2*m){fh=sh-2*m;fw=fh*ar}
+  fr={x:(sw-fw)/2,y:(sh-fh)/2,w:fw,h:fh};
+  minS=crop?Math.max(fw/W,fh/H):fw/W;
+  s=minS;tx=fr.x-(W*s-fw)/2;ty=fr.y-(H*s-fh)/2;
+  const w=$('wrap');w.style.width=W+'px';w.style.height=H+'px';
+  const f=$('fr');f.hidden=!crop;Object.assign(f.style,{left:fr.x+'px',top:fr.y+'px',width:fw+'px',height:fh+'px'});
+  apply()}
+function apply(){
+  tx=Math.min(fr.x,Math.max(fr.x+fr.w-W*s,tx));ty=Math.min(fr.y,Math.max(fr.y+fr.h-H*s,ty));
+  $('wrap').style.transform=`translate(${tx}px,${ty}px) scale(${s})`}
+$('rv').onclick=()=>{if(W)resetView()};
+function busy(t){const b=$('busy');b.hidden=!t;if(t)$('bt').textContent=t}
+addEventListener('resize',()=>{if(!$('ed').hidden&&W)resetView()});
+
+/* ---------- Touch: 1 finger paint, 2 fingers pan/zoom ---------- */
+const ptr=new Map();let paint=false,last=null,g=null;
+const stage=$('stage');
+function pos(e){const r=mc.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H,k:W/r.width}}
+function dot(p,q){const r=+$('bs').value*p.k;mx.strokeStyle=mx.fillStyle='#ff2d2d';mx.lineWidth=r;mx.lineCap=mx.lineJoin='round';
+  mx.beginPath();if(q){mx.moveTo(q.x,q.y);mx.lineTo(p.x,p.y);mx.stroke()}else{mx.arc(p.x,p.y,r/2,0,7);mx.fill()}}
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#busy'))return;
+  stage.setPointerCapture(e.pointerId);ptr.set(e.pointerId,e);
+  if(ptr.size===1){bx.clearRect(0,0,W,H);bx.drawImage(mc,0,0);paint=true;last=pos(e);dot(last)}
+  else if(ptr.size===2){if(paint){mx.clearRect(0,0,W,H);mx.drawImage(bk,0,0);paint=false}
+    const[a,b]=[...ptr.values()],r=stage.getBoundingClientRect();
+    g={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),mx:(a.clientX+b.clientX)/2-r.left,my:(a.clientY+b.clientY)/2-r.top,s,tx,ty}}
+});
+stage.addEventListener('pointermove',e=>{
+  if(!ptr.has(e.pointerId))return;ptr.set(e.pointerId,e);
+  if(paint&&ptr.size===1){const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of(evs.length?evs:[e])){const p=pos(ev);dot(p,last);last=p}}
+  else if(g&&ptr.size>=2){const[a,b]=[...ptr.values()],r=stage.getBoundingClientRect();
+    const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),m={x:(a.clientX+b.clientX)/2-r.left,y:(a.clientY+b.clientY)/2-r.top};
+    const ns=Math.min(minS*14,Math.max(minS,g.s*d/g.d));
+    tx=m.x-(g.mx-g.tx)/g.s*ns;ty=m.y-(g.my-g.ty)/g.s*ns;s=ns;apply()}
+});
+const up=e=>{ptr.delete(e.pointerId);if(ptr.size===0){paint=false;g=null}};
+stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+$('bs').oninput=e=>$('bv').textContent=e.target.value;
+$('cl').onclick=()=>mx.clearRect(0,0,W,H);
+
+/* ---------- Undo ---------- */
+function snap(){const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(ic,0,0);undo.push(c);if(undo.length>4)undo.shift()}
+$('un').onclick=()=>{const c=undo.pop();if(c){ix.clearRect(0,0,W,H);ix.drawImage(c,0,0)}else mx.clearRect(0,0,W,H)};
+
+/* ---------- LaMa inpaint ---------- */
+async function getSess(){
+  if(sess)return sess;
+  const buf=await dbGet('lama');if(!buf)throw new Error('মডেল নেই');
+  ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
+  ort.env.wasm.numThreads=self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1;
+  sess=await ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:['wasm'],graphOptimizationLevel:'all'});
+  return sess}
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+
+async function erase(){
+  const d=mx.getImageData(0,0,W,H).data;let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++){const o=y*W*4+3;for(let x=0;x<W;x++){if(d[o+x*4]>20){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}}
+  if(x1<0)return false;
+  const bw=x1-x0+1,bh=y1-y0+1,cx=(x0+x1)/2,cy=(y0+y1)/2;
+  const side=Math.min(Math.round(Math.max(512,Math.max(bw,bh)*1.8)),Math.min(W,H));
+  const sx=Math.round(Math.min(Math.max(0,cx-side/2),W-side)),sy=Math.round(Math.min(Math.max(0,cy-side/2),H-side));
+  // dilated mask for the crop
+  const em=mk(side,side);em.getContext('2d').drawImage(mc,sx,sy,side,side,0,0,side,side);
+  const dm=mk(side,side),dx=dm.getContext('2d'),r=Math.max(2,Math.round(side/200));
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)dx.drawImage(em,a*r,b*r);
+  // model inputs
+  const N=512,ci=mk(N,N),cx2=ci.getContext('2d',{willReadFrequently:true});cx2.imageSmoothingQuality='high';
+  cx2.drawImage(ic,sx,sy,side,side,0,0,N,N);
+  const cm=mk(N,N),cmx=cm.getContext('2d',{willReadFrequently:true});cmx.drawImage(dm,0,0,N,N);
+  const id=cx2.getImageData(0,0,N,N).data,md=cmx.getImageData(0,0,N,N).data,P=N*N;
+  const fi=new Float32Array(3*P),fm=new Float32Array(P);
+  for(let i=0;i<P;i++){fi[i]=id[i*4]/255;fi[P+i]=id[i*4+1]/255;fi[2*P+i]=id[i*4+2]/255;fm[i]=md[i*4+3]>30?1:0}
+  const se=await getSess(),nm=se.inputNames;
+  const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
+  const out=await se.run({[iN]:new ort.Tensor('float32',fi,[1,3,N,N]),[mN]:new ort.Tensor('float32',fm,[1,1,N,N])});
+  const o=out[se.outputNames[0]].data;
+  let mxv=0;for(let i=0;i<P;i+=97)mxv=Math.max(mxv,o[i],o[P+i],o[2*P+i]);
+  const sc=mxv<=2?255:1,oc=mk(N,N),ox=oc.getContext('2d'),od=ox.createImageData(N,N);
+  for(let i=0;i<P;i++){od.data[i*4]=o[i]*sc;od.data[i*4+1]=o[P+i]*sc;od.data[i*4+2]=o[2*P+i]*sc;od.data[i*4+3]=255}
+  ox.putImageData(od,0,0);
+  // composite only masked area, feathered
+  const t=mk(side,side),tx2=t.getContext('2d');tx2.imageSmoothingQuality='high';tx2.drawImage(oc,0,0,side,side);
+  const bm=mk(side,side),bmx=bm.getContext('2d');bmx.filter='blur('+Math.max(1,side/400)+'px)';bmx.drawImage(dm,0,0);
+  tx2.globalCompositeOperation='destination-in';tx2.drawImage(bm,0,0);
+  ix.drawImage(t,sx,sy);
+  mx.clearRect(0,0,W,H);return true}
+
+$('er').onclick=async()=>{
+  busy(sess?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');
+  await new Promise(r=>setTimeout(r,30));
+  try{snap();if(!await erase())undo.pop()}catch(e){undo.pop();alert('ত্রুটি: '+e.message+'\n(মেমোরি কম হলে অন্য ট্যাব বন্ধ করে আবার চেষ্টা করুন)')}
+  busy(0)};
+
+/* ---------- Done / save ---------- */
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+$('dn').onclick=async()=>{
+  busy('সেভ হচ্ছে…');await new Promise(r=>setTimeout(r,20));
+  let src=ic;
+  if(crop){const c=mk(OW,OH),x=c.getContext('2d');x.imageSmoothingQuality='high';
+    x.drawImage(ic,(fr.x-tx)/s,(fr.y-ty)/s,fr.w/s,fr.h/s,0,0,OW,OH);src=c}
+  const t=/png/i.test(cur.type)?'image/png':/webp/i.test(cur.type)?'image/webp':'image/jpeg';
+  let name=cur.name;
+  if(!(t==='image/jpeg'?/\.jpe?g$/i.test(name):cur.type===t))name=name.replace(/\.[^.]+$/,'')+'.'+(t==='image/png'?'png':t==='image/webp'?'webp':'jpg');
+  if(used.has(name.toLowerCase())){const m=name.match(/^(.*)(\.[^.]+)$/);let n=2,nn;do{nn=m[1]+' ('+n+++')'+m[2]}while(used.has(nn.toLowerCase()));name=nn}
+  used.add(name.toLowerCase());
+  const blob=await new Promise(r=>src.toBlob(r,t,0.97));
+  results.push({name,blob});
+  if(dirH){try{const fh=await dirH.getFileHandle(name,{create:true}),w=await fh.createWritable();await w.write(blob);await w.close()}catch(e){alert('ফোল্ডারে সেভ হয়নি: '+e.message)}}
+  if($('adl').checked)dl(blob,name);
+  idx++;await load()};
+
+function finish(){$('ed').hidden=true;$('fin').hidden=false;busy(0);$('fst').textContent=results.length+' টি ছবি প্রস্তুত।'}
+$('zip').onclick=async()=>{const z=new JSZip();results.forEach(r=>z.file(r.name,r.blob));
+  $('zip').disabled=true;const b=await z.generateAsync({type:'blob',compression:'STORE'});$('zip').disabled=false;dl(b,'cleaned_photos.zip')};
+$('shr').onclick=async()=>{const fl=results.map(r=>new File([r.blob],r.name,{type:r.blob.type}));
+  try{if(navigator.canShare&&navigator.canShare({files:fl}))await navigator.share({files:fl});else alert('শেয়ার সাপোর্ট নেই, ZIP ব্যবহার করুন')}catch(e){}};
+$('rs').onclick=()=>{files=[];results=[];$('pst').textContent='কোনো ছবি নেই';$('pf').value='';$('fin').hidden=true;$('home').hidden=false;refresh()};
+addEventListener('beforeunload',e=>{if(results.length&&$('fin').hidden){e.preventDefault();e.returnValue=''}});
+checkModel();
+</script>
+</body>
+</html>
