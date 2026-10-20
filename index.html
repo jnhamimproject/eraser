@@ -51,51 +51,60 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
 .dlb{position:absolute;right:4px;top:4px;min-height:32px!important;padding:2px 10px!important;font-size:15px;background:#000d!important}
 .bg{position:absolute;top:4px;left:4px;font-size:12px;background:#000c;padding:2px 7px;border-radius:6px}
 #gb{background:var(--panel);border-top:1px solid var(--line);padding:10px 12px max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+#home{gap:10px}
+h1{font-size:22px;margin:4px 0 2px}
+#home .card{padding:10px 12px;gap:8px}
+#home .card h2{font-size:13px;letter-spacing:.03em;text-transform:uppercase}
+.sm{min-height:42px!important;padding:8px 10px!important;font-size:14px}
+.row.c{align-items:center}.row.c>span.st{flex:2}.row.c>span.x{flex:0;color:var(--mu)}
+#rot{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:4}
+#rot button{min-height:44px;padding:6px 14px;background:#000a}
 </style>
 </head>
 <body>
 
 <div id="home">
-  <h1>বাল্ক ইরেজার</h1>
-  <div class="st">ছবি থেকে অবাঞ্ছিত জিনিস (পিন, দাগ) মুছুন। দাগ দিয়ে পরের ছবিতে চলে যান, মোছার কাজ ব্যাকগ্রাউন্ডে হবে। শেষে একসাথে দেখে সেভ করুন।</div>
+  <div><h1>Bulk Eraser</h1><div class="st">Remove unwanted objects from your photos <span id="off"></span></div></div>
 
   <div class="card">
-    <h2>ধাপ ১: AI মডেল (একবারই)</h2>
-    <div id="mst" class="st">চেক হচ্ছে…</div><div id="ast" class="st"></div>
+    <h2>AI Model</h2>
+    <div class="row c"><span id="mst" class="st">…</span>
+      <label class="b sm">Select<input id="mf" type="file" accept=".onnx" hidden></label>
+      <button id="mdl" class="sm">Download</button></div>
+    <div id="ast" class="st"></div>
     <progress id="mpg" max="1" value="0" hidden></progress>
-    <div class="row">
-      <label class="b">ফাইল সিলেক্ট (.onnx)<input id="mf" type="file" accept=".onnx" hidden></label>
-      <button id="mdl">ইন্টারনেট থেকে নামান</button>
-    </div>
   </div>
 
   <div class="card">
-    <h2>ধাপ ২: আউটপুট সাইজ (ফ্রেম)</h2>
-    <div class="row"><button class="ps" data-w="1080" data-h="1080">১:১</button><button class="ps" data-w="900" data-h="1200">৩:৪</button><button class="ps" data-w="1080" data-h="1350">৪:৫</button><button class="ps" data-w="0" data-h="0">অরিজিনাল</button></div>
-    <div class="row"><input id="ow" type="number" min="0" placeholder="প্রস্থ px"><input id="oh" type="number" min="0" placeholder="উচ্চতা px"></div>
-    <div class="st">নিজের সাইজ লিখতে পারেন। ০ বা ফাঁকা = অরিজিনাল সাইজ (ক্রপ ছাড়া)।</div>
+    <h2>Output Size</h2>
+    <div class="row"><button class="ps sm" data-w="1080" data-h="1080">1:1</button><button class="ps sm" data-w="900" data-h="1200">3:4</button><button class="ps sm" data-w="1080" data-h="1350">4:5</button><button class="ps sm" data-w="0" data-h="0">Original</button></div>
+    <div class="row c"><input id="ow" type="number" min="0" placeholder="W"><span class="x">×</span><input id="oh" type="number" min="0" placeholder="H"></div>
   </div>
 
   <div class="card">
-    <h2>কাজের ধরন</h2>
-    <div class="row"><button class="wf" data-d="0">⚡ সাথে সাথে<br><small>ব্যাকগ্রাউন্ডে চলে</small></button><button class="wf" data-d="1">📝 আগে সব মার্ক<br><small>শেষে একসাথে শুরু</small></button></div>
-    <div id="wfh" class="st"></div>
+    <h2>Work Mode</h2>
+    <div class="row"><button class="wf sm" data-d="0">Live</button><button class="wf sm" data-d="1">Batch</button></div>
+    <div id="wfh" hidden></div>
   </div>
 
   <div class="card">
-    <h2>ধাপ ৩: ছবি সিলেক্ট</h2>
-    <label class="b">একসাথে অনেক ছবি বাছুন<input id="pf" type="file" accept="image/*" multiple hidden></label>
-    <div id="pst" class="st">কোনো ছবি নেই</div>
-    <button id="fold" hidden>সেভ ফোল্ডার বাছুন (ল্যাপটপ/ডেস্কটপ)</button><div id="fst2" class="st" hidden></div>
+    <h2>Photos</h2>
+    <div class="row c"><label class="b sm" style="flex:2">Select photos<input id="pf" type="file" accept="image/*" multiple hidden></label><span id="pst" class="st"></span></div>
   </div>
 
-  <button id="go" class="p" disabled>কাজ শুরু করুন</button>
+  <div class="card" id="fcard" hidden>
+    <h2>Save Folder</h2>
+    <button id="fold" class="sm">Choose folder</button><div id="fst2" class="st" hidden></div>
+  </div>
+
+  <button id="go" class="p" disabled>Start</button>
 </div>
 
 <div id="ed" hidden>
   <div id="top"><button id="pv" class="ic">◀</button><b id="cnt"></b><button id="nx" class="ic">▶</button><span id="qs"></span><button id="gr" class="ic">▦ সব ছবি</button></div>
   <div id="stage"><div id="wrap"><canvas id="img"></canvas><canvas id="msk"></canvas></div>
     <div id="fr" hidden></div>
+    <div id="rot"><button id="rl">↺</button><button id="rr">↻</button></div>
     <div id="hint">আঙুলে দাগ দিন · দুই আঙুলে জুম/সরান · তারপর নিচে ✓ চাপুন</div>
     <div id="busy" hidden><div class="sp"></div><div id="bt">প্রসেস হচ্ছে…</div></div>
   </div>
@@ -124,9 +133,9 @@ input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-if('serviceWorker' in navigator&&!self.crossOriginIsolated){
-  navigator.serviceWorker.register('coi-serviceworker.js').then(async()=>{await navigator.serviceWorker.ready;
-    if(!navigator.serviceWorker.controller&&!sessionStorage.getItem('coi')){sessionStorage.setItem('coi','1');location.reload()}}).catch(()=>{});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('eraser-sw.js').then(async()=>{await navigator.serviceWorker.ready;
+    if(!self.crossOriginIsolated&&!navigator.serviceWorker.controller&&!sessionStorage.getItem('coi')){sessionStorage.setItem('coi','1');location.reload()}}).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
 const MODEL_URL='https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx';
@@ -146,8 +155,8 @@ try{mode=localStorage.getItem('mode2')||'ai'}catch(e){}
 function setMode(m){mode=m;try{localStorage.setItem('mode2',m)}catch(e){}
   document.querySelectorAll('.mdb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('mh').textContent=m==='fast'?'ছোট দাগ/পিনের জন্য · প্রায় তাৎক্ষণিক':'নিখুঁত ফল · ব্যাকগ্রাউন্ডে চলে, আপনি পরের ছবিতে যান';preload()}
 document.querySelectorAll('.mdb').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
-function preload(){if(mode==='ai'&&hasModel&&!sessP){$('ast').textContent='AI ইঞ্জিন প্রস্তুত হচ্ছে…';
-  getSess().then(()=>{$('ast').textContent='AI ইঞ্জিন প্রস্তুত ✓'+(self.crossOriginIsolated?' (মাল্টি-থ্রেড)':'')}).catch(()=>{$('ast').textContent=''})}}
+function preload(){if(mode==='ai'&&hasModel&&!sessP){$('ast').textContent='Loading engine…';
+  getSess().then(()=>{$('ast').textContent='Engine ready'+(self.crossOriginIsolated?' · multi-thread':'')}).catch(()=>{$('ast').textContent=''})}}
 
 /* ---------- Workflow ---------- */
 try{defer=localStorage.getItem('wf')==='1'}catch(e){}
@@ -160,27 +169,27 @@ document.querySelectorAll('.wf').forEach(b=>b.onclick=()=>setWf(b.dataset.d==='1
 function refresh(){$('go').disabled=!(hasModel&&files.length)}
 async function checkModel(){
   try{const b=await dbGet('lama');hasModel=!!b;
-    $('mst').textContent=hasModel?'মডেল তৈরি ✓ ('+Math.round(b.byteLength/1048576)+' MB)':'মডেল নেই। নিচ থেকে ফাইল দিন বা নামান।';
-    $('mst').className='st'+(hasModel?' ok':'')}catch(e){$('mst').textContent='স্টোরেজ ত্রুটি: '+e.message}
+    $('mst').textContent=hasModel?'Model ready · '+Math.round(b.byteLength/1048576)+' MB':'No model';
+    $('mst').className='st'+(hasModel?' ok':'')}catch(e){$('mst').textContent='Storage error'}
   refresh();preload()}
 $('mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  $('mst').textContent='সেভ হচ্ছে…';try{await dbSet('lama',await f.arrayBuffer());sessP=null}catch(x){alert('সেভ হয়নি: '+x.message)}checkModel()};
+  $('mst').textContent='Saving…';try{await dbSet('lama',await f.arrayBuffer());sessP=null}catch(x){alert('সেভ হয়নি: '+x.message)}checkModel()};
 $('mdl').onclick=async()=>{
-  const pg=$('mpg');pg.hidden=false;pg.value=0;$('mst').textContent='নামছে…';
+  const pg=$('mpg');pg.hidden=false;pg.value=0;$('mst').textContent='Downloading…';
   try{const r=await fetch(MODEL_URL);if(!r.ok)throw new Error('HTTP '+r.status);
     const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),ch=[];let got=0;
     for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);got+=value.length;
-      if(tot){pg.value=got/tot;$('mst').textContent='নামছে… '+Math.round(got/1048576)+' / '+Math.round(tot/1048576)+' MB'}}
-    $('mst').textContent='সেভ হচ্ছে…';
+      if(tot){pg.value=got/tot;$('mst').textContent='Downloading '+Math.round(got/1048576)+' / '+Math.round(tot/1048576)+' MB'}}
+    $('mst').textContent='Saving…';
     await dbSet('lama',await new Blob(ch).arrayBuffer());sessP=null
   }catch(e){alert('ডাউনলোড ব্যর্থ: '+e.message+'\nলিংক থেকে ফাইল নামিয়ে "ফাইল সিলেক্ট" দিন:\n'+MODEL_URL)}
   pg.hidden=true;checkModel()};
-$('pf').onchange=e=>{files=[...e.target.files];$('pst').textContent=files.length?files.length+' টি ছবি সিলেক্ট হয়েছে':'কোনো ছবি নেই';refresh()};
+$('pf').onchange=e=>{files=[...e.target.files];$('pst').textContent=files.length?files.length+' photos':'';refresh()};
 function setPs(){const w=+$('ow').value||0,h=+$('oh').value||0;document.querySelectorAll('.ps').forEach(b=>b.classList.toggle('on',+b.dataset.w===w&&+b.dataset.h===h))}
 document.querySelectorAll('.ps').forEach(b=>b.onclick=()=>{$('ow').value=b.dataset.w;$('oh').value=b.dataset.h;setPs()});
 $('ow').oninput=$('oh').oninput=setPs;
 try{const z=JSON.parse(localStorage.getItem('sz')||'[1080,1080]');$('ow').value=z[0];$('oh').value=z[1]}catch(e){$('ow').value=$('oh').value=1080}setPs();
-if(window.showDirectoryPicker){$('fold').hidden=false;$('fold').onclick=async()=>{try{dirH=await showDirectoryPicker({mode:'readwrite'});$('fst2').hidden=false;$('fst2').textContent='সেভ ফোল্ডার: '+dirH.name+' ✓';$('fst2').className='st ok'}catch(e){}}}
+if(window.showDirectoryPicker){$('fcard').hidden=false;$('fold').onclick=async()=>{try{dirH=await showDirectoryPicker({mode:'readwrite'});$('fst2').hidden=false;$('fst2').textContent='Folder: '+dirH.name+' ✓';$('fst2').className='st ok'}catch(e){}}}
 $('go').onclick=()=>{
   OW=Math.round(+$('ow').value)||0;OH=Math.round(+$('oh').value)||0;if(!OW||!OH)OW=OH=0;
   try{localStorage.setItem('sz',JSON.stringify([OW,OH]))}catch(e){}
@@ -256,7 +265,7 @@ function pos(e){const r=mc.getBoundingClientRect();return{x:(e.clientX-r.left)/r
 function dot(p,q){const r=+$('bs').value*p.k;mx.strokeStyle=mx.fillStyle='#ff2d2d';mx.lineWidth=r;mx.lineCap=mx.lineJoin='round';
   mx.beginPath();if(q){mx.moveTo(q.x,q.y);mx.lineTo(p.x,p.y);mx.stroke()}else{mx.arc(p.x,p.y,r/2,0,7);mx.fill()}}
 stage.addEventListener('pointerdown',e=>{
-  if(e.target.closest('#busy'))return;
+  if(e.target.closest('#busy,#rot'))return;
   stage.setPointerCapture(e.pointerId);ptr.set(e.pointerId,e);
   if(ptr.size===1){bx.clearRect(0,0,W,H);bx.drawImage(mc,0,0);paint=true;last=pos(e);dot(last)}
   else if(ptr.size===2){if(paint){mx.clearRect(0,0,W,H);mx.drawImage(bk,0,0);paint=false}
@@ -280,6 +289,14 @@ $('cl').onclick=()=>mx.clearRect(0,0,W,H);
 /* ---------- Undo ---------- */
 function snap(){const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(ic,0,0);undo.push(c);if(undo.length>4)undo.shift()}
 $('un').onclick=()=>{const c=undo.pop();if(c){ix.clearRect(0,0,W,H);ix.drawImage(c,0,0)}else mx.clearRect(0,0,W,H)};
+/* rotate current photo (image + marks) by 90° */
+function rotCanvas(src,deg){const w=src.width,h=src.height,c=mk(deg%180?h:w,deg%180?w:h),x=c.getContext('2d');
+  x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(src,-w/2,-h/2);return c}
+function rotate(deg){
+  if(!ready)return;const a=rotCanvas(ic,deg),m=rotCanvas(mc,deg);
+  W=a.width;H=a.height;ic.width=mc.width=bk.width=W;ic.height=mc.height=bk.height=H;
+  ix.drawImage(a,0,0);mx.drawImage(m,0,0);undo=[];dirty=true;photos[cur].crop=null;resetView()}
+$('rl').onclick=()=>rotate(270);$('rr').onclick=()=>rotate(90);
 
 /* ---------- LaMa / fast inpaint ---------- */
 const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
@@ -471,9 +488,25 @@ $('sv').onclick=async()=>{
   }catch(e){alert('সেভ ত্রুটি: '+e.message);st.textContent=''}
   b.disabled=false};
 $('rs').onclick=()=>{if(!confirm('নতুন ব্যাচ শুরু করবেন? সেভ না করা এডিট হারিয়ে যাবে।'))return;
-  photos=[];files=[];q.length=0;cur=-1;$('pst').textContent='কোনো ছবি নেই';$('pf').value='';$('gv').hidden=true;$('ed').hidden=true;$('home').hidden=false;refresh()};
+  photos=[];files=[];q.length=0;cur=-1;$('pst').textContent='';$('pf').value='';$('gv').hidden=true;$('ed').hidden=true;$('home').hidden=false;refresh()};
 addEventListener('beforeunload',e=>{if(photos.some(p=>p.state==='done')||running){e.preventDefault();e.returnValue=''}});
-setWf(defer);setMode(mode);checkModel();
+/* import photos sent from the Camera tool (same site storage) */
+async function fromCam(){
+  if(location.hash!=='#cam')return;
+  let sel;try{sel=JSON.parse(localStorage.getItem('toEraser'))}catch(e){}
+  if(!sel||!sel.ids)return;
+  try{
+    const d=await new Promise((res,rej)=>{const r=indexedDB.open('camtool');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+    const rq=(st,k)=>new Promise(r=>{const q=d.transaction(st).objectStore(st).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()});
+    const fl=[];for(const id of sel.ids){const f=await rq('f',id),b=await rq('b',id);if(f&&b)fl.push(new File([b.blob],f.name,{type:b.blob.type||'image/jpeg'}))}
+    d.close();files=fl;$('pst').textContent=fl.length+' photos (Camera)';refresh();
+  }catch(e){}
+  try{localStorage.removeItem('toEraser')}catch(e){}history.replaceState(null,'',location.pathname)}
+async function offChk(){try{let shell=false,wasm=false;for(const k of await caches.keys()){const c=await caches.open(k);
+  if(await c.match(new URL('./index.html',location.href).href))shell=true;
+  if((await c.keys()).some(r=>/ort-wasm/.test(r.url)))wasm=true}
+  $('off').textContent=shell?(wasm?'· Offline ✓':'· Offline: run AI once online'):''}catch(e){}}
+setWf(defer);setMode(mode);checkModel();fromCam();offChk();
 </script>
 </body>
 </html>
