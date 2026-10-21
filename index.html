@@ -67,7 +67,10 @@ h1{font-size:22px;margin:4px 0 2px}
   <div><h1>Bulk Eraser</h1><div class="st">Remove unwanted objects from your photos <span id="off"></span></div></div>
 
   <div class="card">
-    <h2>AI Model</h2>
+    <h2>AI Models</h2>
+    <div class="row c"><span id="mst2" class="st">…</span>
+      <label class="b sm">Select<input id="mf2" type="file" accept=".onnx" hidden></label>
+      <button id="mdl2" class="sm">Download</button></div>
     <div class="row c"><span id="mst" class="st">…</span>
       <label class="b sm">Select<input id="mf" type="file" accept=".onnx" hidden></label>
       <button id="mdl" class="sm">Download</button></div>
@@ -109,7 +112,7 @@ h1{font-size:22px;margin:4px 0 2px}
     <div id="busy" hidden><div class="sp"></div><div id="bt">প্রসেস হচ্ছে…</div></div>
   </div>
   <div id="bar">
-    <div class="row" id="md"><button class="mdb" data-m="fast">⚡ দ্রুত</button><button class="mdb" data-m="ai">🧠 AI (নিখুঁত)</button></div>
+    <div class="row" id="md"><button class="mdb" data-m="fast">⚡ Fast</button><button class="mdb" data-m="light">🧠 Light</button><button class="mdb" data-m="ai">🧠 Best</button></div>
     <div id="mh"></div>
     <div class="sl">ব্রাশ <input id="bs" type="range" min="6" max="80" value="24"><span id="bv">24</span></div>
     <div class="row">
@@ -140,7 +143,7 @@ if('serviceWorker' in navigator){
 const $=id=>document.getElementById(id);
 const MODEL_URL='https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx';
 const MAXSIDE=5000;
-let files=[],idx=0,results=[],sessP=null,hasModel=false,mode='ai';
+let files=[],idx=0,results=[],sessP={},have={},hasModel=false,mode='light';
 let W=0,H=0,s=1,tx=0,ty=0,undo=[],OW=0,OH=0,fr={x:0,y:0,w:0,h:0},minS=1,crop=false,dirH=null,used=new Set();
 const ic=$('img'),mc=$('msk'),ix=ic.getContext('2d',{willReadFrequently:true}),mx=mc.getContext('2d',{willReadFrequently:true});
 const bk=document.createElement('canvas'),bx=bk.getContext('2d');
@@ -151,12 +154,15 @@ async function dbGet(k){const d=await idb();return new Promise(r=>{const q=d.tra
 async function dbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('k','readwrite');t.objectStore('k').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 
 /* ---------- Mode ---------- */
-try{mode=localStorage.getItem('mode2')||'ai'}catch(e){}
-function setMode(m){mode=m;try{localStorage.setItem('mode2',m)}catch(e){}
-  document.querySelectorAll('.mdb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('mh').textContent=m==='fast'?'ছোট দাগ/পিনের জন্য · প্রায় তাৎক্ষণিক':'নিখুঁত ফল · ব্যাকগ্রাউন্ডে চলে, আপনি পরের ছবিতে যান';preload()}
+try{mode=localStorage.getItem('mode3')||'light'}catch(e){}
+const kindOf=()=>mode==='light'?'migan':mode==='ai'?'lama':null;
+function setMode(m){mode=m;try{localStorage.setItem('mode3',m)}catch(e){}
+  document.querySelectorAll('.mdb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  $('mh').textContent=m==='fast'?'Instant · small marks only':m==='light'?'AI · fast (MI-GAN) · recommended':'AI · slow, most precise (LaMa)';preload()}
 document.querySelectorAll('.mdb').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
-function preload(){if(mode==='ai'&&hasModel&&!sessP){$('ast').textContent='Loading engine…';
-  getSess().then(()=>{$('ast').textContent='Engine ready'+(self.crossOriginIsolated?' · multi-thread':'')}).catch(()=>{$('ast').textContent=''})}}
+function preload(){const k=kindOf();if(k&&have[k]&&!sessP[k]){$('ast').textContent='Loading engine…';
+  getSess(k).then(()=>{$('ast').textContent='Engine ready'+(self.crossOriginIsolated?' · multi-thread':'')}).catch(()=>{$('ast').textContent=''})}}
+function modelOk(){const k=kindOf();if(k&&!have[k]){alert('This mode needs its AI model. Install it on the home page, or switch to ⚡ Fast.');return false}return true}
 
 /* ---------- Workflow ---------- */
 try{defer=localStorage.getItem('wf')==='1'}catch(e){}
@@ -166,25 +172,36 @@ function setWf(d){defer=d;try{localStorage.setItem('wf',d?'1':'0')}catch(e){}
 document.querySelectorAll('.wf').forEach(b=>b.onclick=()=>setWf(b.dataset.d==='1'));
 
 /* ---------- Home ---------- */
-function refresh(){$('go').disabled=!(hasModel&&files.length)}
+function refresh(){$('go').disabled=!files.length}
+const MODELS={
+  migan:{url:'https://huggingface.co/andraniksargsyan/migan/resolve/main/migan_pipeline_v2.onnx',st:'mst2',f:'mf2',b:'mdl2',name:'Light'},
+  lama:{url:MODEL_URL,st:'mst',f:'mf',b:'mdl',name:'Best'}};
 async function checkModel(){
-  try{const b=await dbGet('lama');hasModel=!!b;
-    $('mst').textContent=hasModel?'Model ready · '+Math.round(b.byteLength/1048576)+' MB':'No model';
-    $('mst').className='st'+(hasModel?' ok':'')}catch(e){$('mst').textContent='Storage error'}
-  refresh();preload()}
-$('mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  $('mst').textContent='Saving…';try{await dbSet('lama',await f.arrayBuffer());sessP=null}catch(x){alert('সেভ হয়নি: '+x.message)}checkModel()};
-$('mdl').onclick=async()=>{
-  const pg=$('mpg');pg.hidden=false;pg.value=0;$('mst').textContent='Downloading…';
-  try{const r=await fetch(MODEL_URL);if(!r.ok)throw new Error('HTTP '+r.status);
-    const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),ch=[];let got=0;
-    for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);got+=value.length;
-      if(tot){pg.value=got/tot;$('mst').textContent='Downloading '+Math.round(got/1048576)+' / '+Math.round(tot/1048576)+' MB'}}
-    $('mst').textContent='Saving…';
-    await dbSet('lama',await new Blob(ch).arrayBuffer());sessP=null
-  }catch(e){alert('ডাউনলোড ব্যর্থ: '+e.message+'\nলিংক থেকে ফাইল নামিয়ে "ফাইল সিলেক্ট" দিন:\n'+MODEL_URL)}
-  pg.hidden=true;checkModel()};
-$('pf').onchange=e=>{files=[...e.target.files];$('pst').textContent=files.length?files.length+' photos':'';refresh()};
+  for(const k in MODELS){const M=MODELS[k];
+    try{const b=await dbGet(k);have[k]=!!b;$(M.st).textContent=M.name+(b?' · ready '+Math.round(b.byteLength/1048576)+' MB':' · not installed');$(M.st).className='st'+(b?' ok':'')}
+    catch(e){$(M.st).textContent=M.name+' · storage error'}}
+  hasModel=!!(have.migan||have.lama);refresh();preload()}
+for(const k in MODELS){const M=MODELS[k];
+  $(M.f).onchange=async e=>{const f=e.target.files[0];if(!f)return;$(M.st).textContent=M.name+' · saving…';
+    try{await dbSet(k,await f.arrayBuffer());sessP[k]=null}catch(x){alert('Save failed: '+x.message)}checkModel()};
+  $(M.b).onclick=async()=>{
+    const pg=$('mpg');pg.hidden=false;pg.value=0;$(M.st).textContent=M.name+' · downloading…';
+    try{const r=await fetch(M.url);if(!r.ok)throw new Error('HTTP '+r.status);
+      const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),ch=[];let got=0;
+      for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);got+=value.length;
+        if(tot){pg.value=got/tot;$(M.st).textContent=M.name+' · '+Math.round(got/1048576)+' / '+Math.round(tot/1048576)+' MB'}}
+      $(M.st).textContent=M.name+' · saving…';
+      await dbSet(k,await new Blob(ch).arrayBuffer());sessP[k]=null
+    }catch(e){alert('Download failed: '+e.message+'\nDownload the file from this link, then use Select:\n'+M.url)}
+    pg.hidden=true;checkModel()}}
+$('pf').onchange=async e=>{
+  const fl=[...e.target.files],bad=[];files=[];refresh();
+  for(let i=0;i<fl.length;i++){
+    try{files.push(new File([await fl[i].arrayBuffer()],fl[i].name,{type:fl[i].type||'image/jpeg'}))}catch(x){bad.push(fl[i].name)}
+    $('pst').textContent='Reading '+(i+1)+' / '+fl.length}
+  $('pst').textContent=files.length+' photos'+(bad.length?' · '+bad.length+' unreadable':'');
+  if(bad.length)alert('Could not read '+bad.length+' file(s):\n'+bad.slice(0,8).join('\n')+'\n\nTry selecting them again.');
+  refresh()};
 function setPs(){const w=+$('ow').value||0,h=+$('oh').value||0;document.querySelectorAll('.ps').forEach(b=>b.classList.toggle('on',+b.dataset.w===w&&+b.dataset.h===h))}
 document.querySelectorAll('.ps').forEach(b=>b.onclick=()=>{$('ow').value=b.dataset.w;$('oh').value=b.dataset.h;setPs()});
 $('ow').oninput=$('oh').oninput=setPs;
@@ -218,23 +235,24 @@ async function openPhoto(i){
     if(p.mask)mx.drawImage(p.mask,0,0,W,H);
     $('dn').textContent=defer?(i===photos.length-1?'✓ শেষ ছবি — রিমুভ শুরুর পাতায় ▶':'✓ মার্ক সেভ, পরের ছবি ▶'):'✓ কাজে দিন ▶';
     ready=true;
-  }catch(e){alert('ছবি খোলা যায়নি: '+p.name)}
+  }catch(e){alert('ছবি খোলা যায়নি: '+p.name+'\n'+(e.message||''))}
   busy(0)}
 async function commit(){
   if(cur<0||!ready)return;const p=photos[cur];
   if(crop)p.crop={x:(fr.x-tx)/s/W,y:(fr.y-ty)/s/H,w:fr.w/s/W,h:fr.h/s/H};
   if(dirty){p.blob=await blobOf(ic,p.type);p.state='done';p.thumb=null;dirty=false}
   const comps=buildComps(ic,mc,W,H);
+  if(comps.length&&!modelOk()){p.thumb=null;return false}
   if(defer){
     if(comps.length){const k=Math.min(1,1600/Math.max(W,H)),c=mk(Math.max(1,Math.round(W*k)),Math.max(1,Math.round(H*k)));
       c.getContext('2d').drawImage(mc,0,0,c.width,c.height);p.mask=c}
     else p.mask=null;
   }else if(comps.length){mx.clearRect(0,0,W,H);enqueue(p,comps,W,H)}
-  p.thumb=null}
+  p.thumb=null;return true}
 async function nav(i){
   if(navBusy)return;navBusy=true;
-  try{await commit();ready=false}finally{navBusy=false}
-  if(i<0)return;
+  let ok;try{ok=await commit();if(ok!==false)ready=false}finally{navBusy=false}
+  if(ok===false||i<0)return;
   if(i>=photos.length)showGrid();else openPhoto(i)}
 $('pv').onclick=()=>cur>0&&nav(cur-1);
 $('nx').onclick=$('dn').onclick=()=>nav(cur+1);
@@ -301,17 +319,17 @@ $('rl').onclick=()=>rotate(270);$('rr').onclick=()=>rotate(90);
 /* ---------- LaMa / fast inpaint ---------- */
 const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
 let fixedN=false;
-function getSess(){
-  if(!sessP){sessP=(async()=>{
-    const buf=await dbGet('lama');if(!buf)throw new Error('মডেল নেই');
+function getSess(k){
+  if(!sessP[k]){sessP[k]=(async()=>{
+    const buf=await dbGet(k);if(!buf)throw new Error('Model not installed');
     ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
     const th=self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1;
     const cf=[[th,true],[th,false]];if(th>1)cf.push([1,false]);let err;
     for(const[n,px]of cf){try{ort.env.wasm.numThreads=n;ort.env.wasm.proxy=px;
       return await ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:['wasm'],graphOptimizationLevel:'basic'})}catch(e){err=e}}
     throw err
-  })();sessP.catch(()=>{sessP=null})}
-  return sessP}
+  })();sessP[k].catch(()=>{sessP[k]=null})}
+  return sessP[k]}
 function fastFill(c,w,h,hole){
   const N=w*h;let cc=new Float32Array(N*3),aa=new Float32Array(N);
   for(let i=0;i<N;i++)if(!hole[i]){cc[i*3]=c[i*3];cc[i*3+1]=c[i*3+1];cc[i*3+2]=c[i*3+2];aa[i]=1}
@@ -349,6 +367,7 @@ function buildComps(ic,mc,W,H){
     const bx0=x0*g,by0=y0*g,bw=(x1+1)*g-bx0,bh=(y1+1)*g-by0,mxs=Math.max(bw,bh),cx=bx0+bw/2,cy=by0+bh/2;
     let N=512,side;
     if(fast)side=Math.max(96,mxs*3);
+    else if(mode==='light')side=Math.min(1024,Math.max(384,Math.round(mxs*2.5)));
     else if(!fixedN&&mxs*1.8<=300){N=256;side=Math.max(256,mxs*1.8)}
     else side=Math.max(512,mxs*1.8);
     side=Math.min(Math.round(side),Math.min(W,H));
@@ -366,7 +385,7 @@ async function runAI(c,N){
   const id=cx2.getImageData(0,0,N,N).data,md=cmx.getImageData(0,0,N,N).data,P=N*N;
   const fi=new Float32Array(3*P),fm=new Float32Array(P);
   for(let i=0;i<P;i++){fi[i]=id[i*4]/255;fi[P+i]=id[i*4+1]/255;fi[2*P+i]=id[i*4+2]/255;fm[i]=md[i*4+3]>30?1:0}
-  const se=await getSess(),nm=se.inputNames;
+  const se=await getSess('lama'),nm=se.inputNames;
   const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
   const out=await se.run({[iN]:new ort.Tensor('float32',fi,[1,3,N,N]),[mN]:new ort.Tensor('float32',fm,[1,1,N,N])});
   const o=out[se.outputNames[0]].data;
@@ -375,6 +394,17 @@ async function runAI(c,N){
   for(let i=0;i<P;i++){od.data[i*4]=o[i]*sc;od.data[i*4+1]=o[P+i]*sc;od.data[i*4+2]=o[2*P+i]*sc;od.data[i*4+3]=255}
   ox.putImageData(od,0,0);return oc}
 
+async function withRetry(k,fn){try{return await fn()}catch(e){sessP[k]=null;return await fn()}}
+async function runMigan(c){
+  const side=c.side,ci=c.cropC.getContext('2d').getImageData(0,0,side,side).data,md=c.dm.getContext('2d').getImageData(0,0,side,side).data,P=side*side;
+  const im=new Uint8Array(3*P),mk8=new Uint8Array(P);
+  for(let i=0;i<P;i++){im[i]=ci[i*4];im[P+i]=ci[i*4+1];im[2*P+i]=ci[i*4+2];mk8[i]=md[i*4+3]>30?0:255}
+  const se=await getSess('migan'),nm=se.inputNames;
+  const iN=nm.find(n=>/img|image/i.test(n))||nm[0],mN=nm.find(n=>/mask/i.test(n))||nm[1];
+  const out=await se.run({[iN]:new ort.Tensor('uint8',im,[1,3,side,side]),[mN]:new ort.Tensor('uint8',mk8,[1,1,side,side])});
+  const o=out[se.outputNames[0]].data,oc=mk(side,side),ox=oc.getContext('2d'),od=ox.createImageData(side,side);
+  for(let i=0;i<P;i++){od.data[i*4]=o[i];od.data[i*4+1]=o[P+i];od.data[i*4+2]=o[2*P+i];od.data[i*4+3]=255}
+  ox.putImageData(od,0,0);return oc}
 async function runComp(c){
   const side=c.side;let t;
   if(c.mode==='fast'){
@@ -383,30 +413,39 @@ async function runComp(c){
     const o=fastFill(f,side,side,hole);
     for(let i=0;i<n;i++)if(hole[i]){px[i*4]=o[i*3];px[i*4+1]=o[i*3+1];px[i*4+2]=o[i*3+2]}
     t=mk(side,side);t.getContext('2d').putImageData(id2,0,0);
+  }else if(c.mode==='light'){
+    t=await withRetry('migan',()=>runMigan(c));
   }else{
-    let o;try{o=await runAI(c,c.N)}catch(e){if(c.N===256){fixedN=true;o=await runAI(c,512)}else throw e}
+    let o;try{o=await runAI(c,c.N)}catch(e){
+      if(c.N===256){fixedN=true;o=await withRetry('lama',()=>runAI(c,512))}else{sessP.lama=null;o=await runAI(c,c.N)}}
     t=mk(side,side);const tc=t.getContext('2d');tc.imageSmoothingQuality='high';tc.drawImage(o,0,0,side,side)}
   const bm=mk(side,side),b2=bm.getContext('2d');b2.filter='blur('+Math.max(1,side/400)+'px)';b2.drawImage(c.dm,0,0);
   const t2=t.getContext('2d');t2.globalCompositeOperation='destination-in';t2.drawImage(bm,0,0);return t}
 
 /* immediate preview on current photo */
 $('er').onclick=async()=>{
-  if(!ready)return;const comps=buildComps(ic,mc,W,H);if(!comps.length)return;
-  busy(mode==='fast'||sessP?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');await new Promise(r=>setTimeout(r,30));
+  if(!ready)return;const comps=buildComps(ic,mc,W,H);if(!comps.length||!modelOk())return;
+  busy(mode==='fast'||sessP[kindOf()]?'মুছছে…':'মডেল লোড হচ্ছে (প্রথমবার ধীর)…');await new Promise(r=>setTimeout(r,30));
   try{snap();for(const c of comps)ix.drawImage(await runComp(c),c.sx,c.sy);mx.clearRect(0,0,W,H);dirty=true}
   catch(e){undo.pop();alert('ত্রুটি: '+e.message)}
   busy(0)};
 
 /* ---------- Background queue ---------- */
 const q=[];let running=false;
-function upd(){const n=q.length+(running?1:0),t=n?'⏳ '+n+' কাজ চলছে':'';$('qs').textContent=t;$('gq').textContent=t||'✓ সব কাজ শেষ';if(!$('gv').hidden)render()}
+let jobMs=0,jobN=0,wl=null;
+async function lock(){try{if('wakeLock' in navigator&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){}}
+function unlock(){try{wl&&wl.release()}catch(e){}wl=null}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&(running||q.length))lock()});
+function upd(){const n=q.length+(running?1:0),t=n?'⏳ '+n+' কাজ'+(jobN?' · '+Math.round(jobMs/jobN/1000)+'s/photo':''):'';
+  $('qs').textContent=t;$('gq').textContent=t||'✓ সব কাজ শেষ';if(!$('gv').hidden)render()}
 function enqueue(p,comps,W0,H0){p.jobs++;p.err=null;q.push({p,comps,W0,H0});upd();pump()}
 async function pump(){
-  if(running)return;running=true;
-  while(q.length){const j=q.shift();
-    try{await runJob(j);j.p.state='done'}catch(e){j.p.err=e.message||'ত্রুটি';console.error(e)}
+  if(running)return;running=true;lock();
+  while(q.length){const j=q.shift(),t0=performance.now();
+    try{await runJob(j);j.p.state='done'}catch(e){j.p.err=e.message||'Error';console.error(e)}
+    jobMs+=performance.now()-t0;jobN++;
     j.p.jobs--;j.p.thumb=null;if(!j.p.jobs){j.p.w.forEach(r=>r());j.p.w=[]}upd()}
-  running=false;upd()}
+  running=false;unlock();upd()}
 async function runJob({p,comps,W0,H0}){
   const ts=[];for(const c of comps)ts.push([c,await runComp(c)]);
   const bmp=await createImageBitmap(p.blob,{imageOrientation:'from-image'});
@@ -432,7 +471,7 @@ function render(){
   const items=photos.map((p,i)=>{const d=document.createElement('div');d.className='cd';
     const t=p.err?' ⚠':p.jobs?' ⏳':p.mask?' 🖍':p.state==='done'?' ✓':'';
     d.innerHTML='<canvas></canvas><span class="bg">'+(i+1)+t+'</span>'+(p.jobs?'':'<button class="dlb">⬇</button>');
-    d.onclick=()=>openPhoto(i);
+    d.onclick=()=>{if(p.err&&!confirm('Error: '+p.err+'\n\nOpen this photo anyway?'))return;openPhoto(i)};
     const bt=d.querySelector('.dlb');
     if(bt)bt.onclick=async e=>{e.stopPropagation();bt.disabled=true;
       try{dl(await renderFinal(p),outName(p,new Set()))}catch(x){alert('ডাউনলোড ত্রুটি: '+x.message)}bt.disabled=false};
@@ -447,7 +486,7 @@ $('gbk').onclick=()=>openPhoto(Math.max(0,Math.min(photos.length-1,cur<0?0:cur))
 
 /* ---------- Start removal for all marked photos ---------- */
 $('st').onclick=async()=>{
-  const list=photos.filter(p=>p.mask);if(!list.length)return;
+  const list=photos.filter(p=>p.mask);if(!list.length||!modelOk())return;
   const b=$('st'),st=$('sst');b.disabled=true;
   for(let i=0;i<list.length;i++){const p=list[i];st.textContent='প্রস্তুত হচ্ছে '+(i+1)+' / '+list.length+'…';
     try{await waitP(p);
